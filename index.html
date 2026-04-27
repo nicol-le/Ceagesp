@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard CEAGESP - Evolução de Preços</title>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { margin:0; font-family: 'Segoe UI', Arial; background:#f0f2f5; }
+        header { background:#b71c1c; color:white; padding:15px 30px; display:flex; justify-content:space-between; align-items:center; }
+        .container { padding:20px; max-width: 1400px; margin: auto; }
+        .box { background:white; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1); margin-bottom:20px; }
+        .filters { display:flex; flex-wrap:wrap; gap:15px; align-items:flex-end; }
+        input, button { padding:12px; border-radius:8px; border:1px solid #ccc; outline: none; }
+        button { background:#b71c1c; color:white; cursor:pointer; border:none; font-weight:bold; }
+        button:hover { background:#8e1616; }
+        
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 15px; border-radius: 10px; text-align: center; border-left: 5px solid #b71c1c; }
+        .stat-card h4 { margin: 0; color: #666; font-size: 14px; }
+        .stat-card p { margin: 10px 0 0; font-size: 22px; font-weight: bold; color: #b71c1c; }
+
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; }
+        .card-chart { background:white; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+        h3 { color:#b71c1c; margin-top:0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        canvas { width:100% !important; height:300px !important; }
+        
+        #status { font-weight: bold; color: #2e7d32; margin-left: 10px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h2>CEAGESP - Painel de Preços</h2>
+    <div id="status-container">Arquivo: <span id="status">Pendente</span></div>
+</header>
+
+<div class="container">
+    <div class="box">
+        <input type="file" id="fileInput" accept=".csv">
+        <div class="filters" style="margin-top: 15px;">
+            <div style="flex:1">
+                <label>Cultura:</label><br>
+                <input list="produtos" id="produtoInput" placeholder="Ex: BANANA" style="width:100%">
+                <datalist id="produtos"></datalist>
+            </div>
+            <button onclick="processarAnalise()">Gerar Análise Completa</button>
+        </div>
+    </div>
+
+    <div class="stats-row" id="resumo" style="display:none;">
+        <div class="stat-card"><h4>Média Histórica (Todos os Anos)</h4><p id="media-geral">R$ 0,00</p></div>
+        <div class="stat-card"><h4>Unidade de Medida</h4><p id="unidade-medida">-</p></div>
+        <div class="stat-card"><h4>Maior Preço Registrado</h4><p id="max-geral">R$ 0,00</p></div>
+    </div>
+
+    <div class="charts-grid" id="dashboard">
+        <div class="card-chart">
+            <h3>Média Mensal (Sazonalidade)</h3>
+            <canvas id="chartSazonalidade"></canvas>
+        </div>
+        <div class="card-chart">
+            <h3>Evolução de Preço por Ano</h3>
+            <canvas id="chartAnual"></canvas>
+        </div>
+    </div>
+    
+    <h2 id="titulo-detalhado" style="margin-top:40px; color:#b71c1c; display:none;">Detalhamento Mensal por Ano</h2>
+    <div class="charts-grid" id="grid-anos"></div>
+</div>
+
+<script>
+let dadosRaw = [];
+let listaCharts = [];
+
+// 1. LEITURA DO ARQUIVO
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    Papa.parse(e.target.files[0], {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+            // Limpeza de chaves (remover espaços invisíveis)
+            dadosRaw = results.data.map(row => {
+                let n = {};
+                for (let k in row) n[k.trim()] = row[k];
+                return n;
+            });
+            document.getElementById('status').innerText = "Carregado!";
+            popularDatalist();
+        }
+    });
+});
+
+function popularDatalist() {
+    let produtos = [...new Set(dadosRaw.map(d => d.Produto))].filter(Boolean).sort();
+    let dl = document.getElementById('produtos');
+    dl.innerHTML = "";
+    produtos.forEach(p => {
+        let opt = document.createElement('option');
+        opt.value = p;
+        dl.appendChild(opt);
+    });
+}
+
+// 2. PROCESSAMENTO E GRÁFICOS
+function processarAnalise() {
+    const prodSelecionado = document.getElementById('produtoInput').value.toUpperCase();
+    if (!prodSelecionado) return alert("Selecione um produto");
+
+    // Limpar gráficos anteriores
+    listaCharts.forEach(c => c.destroy());
+    listaCharts = [];
+    document.getElementById('grid-anos').innerHTML = "";
+
+    // Filtrar dados do produto
+    const filtrados = dadosRaw.filter(d => d.Produto && d.Produto.toUpperCase() === prodSelecionado);
+    
+    if (filtrados.length === 0) return alert("Produto não encontrado.");
+
+    // Organizar dados
+    let porAno = {};
+    let porMesGeral = {}; // Média de todos os janeiros, todos os fevereiros...
+    let somaGeral = 0;
+    let maxGeral = 0;
+    let unidade = filtrados[0].Unidade || "KG";
+
+    filtrados.forEach(d => {
+        // Limpar preço: trocar vírgula por ponto e garantir que é número
+        let preco = parseFloat(String(d.Comum).replace(',', '.'));
+        if (isNaN(preco)) return;
+
+        let ano = d.ano;
+        let mes = d.MÊS;
+
+        somaGeral += preco;
+        if (preco > maxGeral) maxGeral = preco;
+
+        // Agrupar por Ano e Mês
+        if (!porAno[ano]) porAno[ano] = {};
+        if (!porAno[ano][mes]) porAno[ano][mes] = [];
+        porAno[ano][mes].push(preco);
+
+        // Agrupar para Sazonalidade Geral
+        if (!porMesGeral[mes]) porMesGeral[mes] = [];
+        porMesGeral[mes].push(preco);
+    });
+
+    // 3. ATUALIZAR CARDS DE RESUMO
+    document.getElementById('resumo').style.display = 'grid';
+    document.getElementById('media-geral').innerText = `R$ ${(somaGeral / filtrados.length).toFixed(2)}`;
+    document.getElementById('unidade-medida').innerText = unidade;
+    document.getElementById('max-geral').innerText = `R$ ${maxGeral.toFixed(2)}`;
+
+    // 4. GRÁFICO 1: SAZONALIDADE GERAL (Média mensal de todo o histórico)
+    const mesesOrdem = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+    let valoresSazonalidade = mesesOrdem.map(m => {
+        let v = porMesGeral[m] || [];
+        return v.length ? (v.reduce((a,b) => a+b, 0) / v.length).toFixed(2) : 0;
+    });
+    gerarChart("chartSazonalidade", "bar", mesesOrdem, valoresSazonalidade, `Média Histórica (R$ / ${unidade})`);
+
+    // 5. GRÁFICO 2: EVOLUÇÃO ANUAL (Média por ano)
+    let anosLabels = Object.keys(porAno).sort();
+    let valoresAnuais = anosLabels.map(a => {
+        let somaAno = 0, contAno = 0;
+        for(let m in porAno[a]) {
+            somaAno += porAno[a][m].reduce((x,y) => x+y, 0);
+            contAno += porAno[a][m].length;
+        }
+        return (somaAno / contAno).toFixed(2);
+    });
+    gerarChart("chartAnual", "line", anosLabels, valoresAnuais, "Média por Ano (R$)");
+
+    // 6. CRIAR UM GRÁFICO PARA CADA ANO (Detalhamento Mensal)
+    document.getElementById('titulo-detalhado').style.display = 'block';
+    anosLabels.forEach(ano => {
+        const div = document.createElement('div');
+        div.className = 'card-chart';
+        div.innerHTML = `<h3>Ano: ${ano}</h3><canvas id="chart-${ano}"></canvas>`;
+        document.getElementById('grid-anos').appendChild(div);
+
+        let valoresMesesAno = mesesOrdem.map(m => {
+            let v = porAno[ano][m] || [];
+            return v.length ? (v.reduce((a,b) => a+b, 0) / v.length).toFixed(2) : 0;
+        });
+
+        gerarChart(`chart-${ano}`, "bar", mesesOrdem, valoresMesesAno, `Preços em ${ano}`);
+    });
+}
+
+function gerarChart(id, tipo, labels, data, label) {
+    const ctx = document.getElementById(id).getContext('2d');
+    const chart = new Chart(ctx, {
+        type: tipo,
+        data: {
+            labels: labels,
+            datasets: [{
+                label: label,
+                data: data,
+                backgroundColor: tipo === 'line' ? 'transparent' : 'rgba(183, 28, 28, 0.7)',
+                borderColor: '#b71c1c',
+                borderWidth: 2,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: false } }
+        }
+    });
+    listaCharts.push(chart);
+}
+</script>
+</body>
+</html>
