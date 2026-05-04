@@ -38,7 +38,7 @@
 
 <div class="container">
     <div class="box">
-        <input type="file" id="fileInput" accept=".csv">
+       <button onclick="carregarDadosGit()">Carregar Dados do Servidor</button>
         <div class="filters" style="margin-top: 15px;">
             <div style="flex:1">
                 <label>Cultura:</label><br>
@@ -74,28 +74,49 @@
 let dadosRaw = [];
 let listaCharts = [];
 
-// 1. LEITURA DO ARQUIVO
-document.getElementById('fileInput').addEventListener('change', function(e) {
-    Papa.parse(e.target.files[0], {
+/* 🚀 CARREGAMENTO AUTOMÁTICO AO ABRIR */
+window.onload = carregarDadosGit;
+
+/* 🔗 FUNÇÃO PARA CARREGAR DO GITHUB */
+function carregarDadosGit(){
+
+    const url = "https://raw.githubusercontent.com/nicol-le/Ceagesp/refs/heads/main/0089%20PRE%C3%87OS%20ETSP%20CEAGESP%202020%20A%202026_03%20UFSCAR%20HORTALI%C3%87AS%20-%202023%20A%202025.csv";
+
+    document.getElementById('status').innerText = "Carregando dados do servidor...";
+
+    Papa.parse(url, {
+        download: true,
         header: true,
         skipEmptyLines: true,
-        complete: function(results) {
-            // Limpeza de chaves (remover espaços invisíveis)
+        worker: true,
+        complete: function(results){
+
+            // 🔥 LIMPEZA DE DADOS (IMPORTANTE)
             dadosRaw = results.data.map(row => {
                 let n = {};
                 for (let k in row) n[k.trim()] = row[k];
                 return n;
             });
-            document.getElementById('status').innerText = "Carregado!";
+
+            document.getElementById('status').innerText = "Dados carregados automaticamente!";
             popularDatalist();
+        },
+        error: function(err){
+            console.error(err);
+            document.getElementById('status').innerText = "Erro ao carregar dados!";
         }
     });
-});
+}
 
+/* 🔎 AUTOCOMPLETE */
 function popularDatalist() {
-    let produtos = [...new Set(dadosRaw.map(d => d.Produto))].filter(Boolean).sort();
+    let produtos = [...new Set(dadosRaw.map(d => d.Produto))]
+        .filter(Boolean)
+        .sort();
+
     let dl = document.getElementById('produtos');
     dl.innerHTML = "";
+
     produtos.forEach(p => {
         let opt = document.createElement('option');
         opt.value = p;
@@ -103,94 +124,134 @@ function popularDatalist() {
     });
 }
 
-// 2. PROCESSAMENTO E GRÁFICOS
+/* 📊 PROCESSAMENTO E GRÁFICOS */
 function processarAnalise() {
-    const prodSelecionado = document.getElementById('produtoInput').value.toUpperCase();
-    if (!prodSelecionado) return alert("Selecione um produto");
 
-    // Limpar gráficos anteriores
+    const prodSelecionado = document.getElementById('produtoInput').value.toUpperCase();
+
+    if (!prodSelecionado) {
+        alert("Selecione um produto");
+        return;
+    }
+
+    // 🔥 LIMPAR GRÁFICOS ANTIGOS
     listaCharts.forEach(c => c.destroy());
     listaCharts = [];
     document.getElementById('grid-anos').innerHTML = "";
 
-    // Filtrar dados do produto
-    const filtrados = dadosRaw.filter(d => d.Produto && d.Produto.toUpperCase() === prodSelecionado);
-    
-    if (filtrados.length === 0) return alert("Produto não encontrado.");
+    // 🔎 FILTRO
+    const filtrados = dadosRaw.filter(d =>
+        d.Produto && d.Produto.toUpperCase() === prodSelecionado
+    );
 
-    // Organizar dados
+    if (filtrados.length === 0) {
+        alert("Produto não encontrado.");
+        return;
+    }
+
+    // 📊 ORGANIZAÇÃO DOS DADOS
     let porAno = {};
-    let porMesGeral = {}; // Média de todos os janeiros, todos os fevereiros...
+    let porMesGeral = {};
     let somaGeral = 0;
     let maxGeral = 0;
     let unidade = filtrados[0].Unidade || "KG";
 
     filtrados.forEach(d => {
-        // Limpar preço: trocar vírgula por ponto e garantir que é número
+
         let preco = parseFloat(String(d.Comum).replace(',', '.'));
         if (isNaN(preco)) return;
 
         let ano = d.ano;
-        let mes = d.MÊS;
+        let mes = (d.MÊS || "").toLowerCase();
 
         somaGeral += preco;
         if (preco > maxGeral) maxGeral = preco;
 
-        // Agrupar por Ano e Mês
+        // Por ano
         if (!porAno[ano]) porAno[ano] = {};
         if (!porAno[ano][mes]) porAno[ano][mes] = [];
         porAno[ano][mes].push(preco);
 
-        // Agrupar para Sazonalidade Geral
+        // Sazonalidade geral
         if (!porMesGeral[mes]) porMesGeral[mes] = [];
         porMesGeral[mes].push(preco);
     });
 
-    // 3. ATUALIZAR CARDS DE RESUMO
+    /* 📈 CARDS */
     document.getElementById('resumo').style.display = 'grid';
-    document.getElementById('media-geral').innerText = `R$ ${(somaGeral / filtrados.length).toFixed(2)}`;
-    document.getElementById('unidade-medida').innerText = unidade;
-    document.getElementById('max-geral').innerText = `R$ ${maxGeral.toFixed(2)}`;
+    document.getElementById('media-geral').innerText =
+        `R$ ${(somaGeral / filtrados.length).toFixed(2)}`;
 
-    // 4. GRÁFICO 1: SAZONALIDADE GERAL (Média mensal de todo o histórico)
-    const mesesOrdem = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+    document.getElementById('unidade-medida').innerText = unidade;
+
+    document.getElementById('max-geral').innerText =
+        `R$ ${maxGeral.toFixed(2)}`;
+
+    /* 📅 ORDEM DOS MESES */
+    const mesesOrdem = [
+        "janeiro","fevereiro","março","abril","maio","junho",
+        "julho","agosto","setembro","outubro","novembro","dezembro"
+    ];
+
+    /* 📊 SAZONALIDADE */
     let valoresSazonalidade = mesesOrdem.map(m => {
         let v = porMesGeral[m] || [];
-        return v.length ? (v.reduce((a,b) => a+b, 0) / v.length).toFixed(2) : 0;
+        return v.length ? (v.reduce((a,b)=>a+b,0)/v.length).toFixed(2) : 0;
     });
-    gerarChart("chartSazonalidade", "bar", mesesOrdem, valoresSazonalidade, `Média Histórica (R$ / ${unidade})`);
 
-    // 5. GRÁFICO 2: EVOLUÇÃO ANUAL (Média por ano)
+    gerarChart("chartSazonalidade","bar",mesesOrdem,valoresSazonalidade,
+        `Média Histórica (R$ / ${unidade})`);
+
+    /* 📈 EVOLUÇÃO ANUAL */
     let anosLabels = Object.keys(porAno).sort();
-    let valoresAnuais = anosLabels.map(a => {
-        let somaAno = 0, contAno = 0;
-        for(let m in porAno[a]) {
-            somaAno += porAno[a][m].reduce((x,y) => x+y, 0);
-            contAno += porAno[a][m].length;
-        }
-        return (somaAno / contAno).toFixed(2);
-    });
-    gerarChart("chartAnual", "line", anosLabels, valoresAnuais, "Média por Ano (R$)");
 
-    // 6. CRIAR UM GRÁFICO PARA CADA ANO (Detalhamento Mensal)
+    let valoresAnuais = anosLabels.map(a => {
+        let soma = 0, cont = 0;
+
+        for (let m in porAno[a]) {
+            soma += porAno[a][m].reduce((x,y)=>x+y,0);
+            cont += porAno[a][m].length;
+        }
+
+        return (soma / cont).toFixed(2);
+    });
+
+    gerarChart("chartAnual","line",anosLabels,valoresAnuais,
+        "Média por Ano (R$)");
+
+    /* 📊 GRÁFICOS POR ANO */
     document.getElementById('titulo-detalhado').style.display = 'block';
+
     anosLabels.forEach(ano => {
+
         const div = document.createElement('div');
         div.className = 'card-chart';
         div.innerHTML = `<h3>Ano: ${ano}</h3><canvas id="chart-${ano}"></canvas>`;
+
         document.getElementById('grid-anos').appendChild(div);
 
         let valoresMesesAno = mesesOrdem.map(m => {
             let v = porAno[ano][m] || [];
-            return v.length ? (v.reduce((a,b) => a+b, 0) / v.length).toFixed(2) : 0;
+            return v.length ? (v.reduce((a,b)=>a+b,0)/v.length).toFixed(2) : 0;
         });
 
         gerarChart(`chart-${ano}`, "bar", mesesOrdem, valoresMesesAno, `Preços em ${ano}`);
     });
 }
 
+/* 📊 FUNÇÃO DE GRÁFICO (ALTA QUALIDADE) */
 function gerarChart(id, tipo, labels, data, label) {
-    const ctx = document.getElementById(id).getContext('2d');
+
+    let canvas = document.getElementById(id);
+    let dpi = window.devicePixelRatio || 1;
+    let rect = canvas.getBoundingClientRect();
+
+    canvas.width = rect.width * dpi;
+    canvas.height = rect.height * dpi;
+
+    let ctx = canvas.getContext('2d');
+    ctx.scale(dpi, dpi);
+
     const chart = new Chart(ctx, {
         type: tipo,
         data: {
@@ -198,18 +259,22 @@ function gerarChart(id, tipo, labels, data, label) {
             datasets: [{
                 label: label,
                 data: data,
-                backgroundColor: tipo === 'line' ? 'transparent' : 'rgba(183, 28, 28, 0.7)',
+                backgroundColor: tipo === 'line' ? 'transparent' : 'rgba(183,28,28,0.7)',
                 borderColor: '#b71c1c',
                 borderWidth: 2,
+                tension: 0.3,
                 fill: true
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: { y: { beginAtZero: false } }
+            scales: {
+                y: { beginAtZero: false }
+            }
         }
     });
+
     listaCharts.push(chart);
 }
 </script>
