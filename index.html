@@ -60,6 +60,7 @@
         <div class="stat-card"><h4>Média Histórica (Todos os Anos)</h4><p id="media-geral">R$ 0,00</p></div>
         <div class="stat-card"><h4>Unidade de Medida</h4><p id="unidade-medida">-</p></div>
         <div class="stat-card"><h4>Maior Preço Registrado</h4><p id="max-geral">R$ 0,00</p></div>
+        <div class="stat-card"><h4>Menor Preço Registrado</h4><p id="min-geral">R$ 0,00</p></div>
     </div>
 
     <div class="charts-grid" id="dashboard">
@@ -245,64 +246,95 @@ function processarAnalise() {
         return;
     }
 
-    /* 📦 ORGANIZAÇÃO */
-    let porAno = {};
+   /* 📦 ORGANIZAÇÃO */
+let porAno = {};
 
-    let porMesGeral = {};
+let porMesGeral = {};
 
-    let somaGeral = 0;
+let somaGeral = 0;
 
-    let maxGeral = 0;
+let maxGeral = 0;
+let minGeral = Infinity;
 
-    let unidade = filtrados[0].Unidade || "KG";
+let dataMax = "";
+let dataMin = "";
 
-    filtrados.forEach(d => {
+let unidade = filtrados[0].Unidade || "KG";
 
-        let preco =
-            parseFloat(
-                String(d.Comum)
-                .replace(',', '.')
-            );
+filtrados.forEach(d => {
 
-        if (isNaN(preco)) return;
+    let preco =
+        parseFloat(
+            String(d.Comum)
+            .replace(',', '.')
+        );
 
-        let ano = d.ano;
+    if (isNaN(preco)) return;
 
-        let mes = (d.MÊS || "").toLowerCase();
+    let ano = d.ano;
 
-        somaGeral += preco;
+    let mes = (d.MÊS || "").toLowerCase();
 
-        if (preco > maxGeral)
-            maxGeral = preco;
+    let dataRegistro =
+        `${d.DIA || "--"} / ${d.MÊS || "--"} / ${d.ano || "--"}`;
 
-        /* 📅 POR ANO */
-        if (!porAno[ano])
-            porAno[ano] = {};
+    somaGeral += preco;
 
-        if (!porAno[ano][mes])
-            porAno[ano][mes] = [];
+    /* 🔺 MAIOR PREÇO */
+    if (preco > maxGeral){
 
-        porAno[ano][mes].push(preco);
+        maxGeral = preco;
 
-        /* 📈 SAZONALIDADE */
-        if (!porMesGeral[mes])
-            porMesGeral[mes] = [];
+        dataMax = dataRegistro;
+    }
 
-        porMesGeral[mes].push(preco);
-    });
+    /* 🔻 MENOR PREÇO */
+    if (preco < minGeral){
 
-    /* 📌 RESUMO */
-    document.getElementById('resumo').style.display = 'grid';
+        minGeral = preco;
 
-    document.getElementById('media-geral').innerText =
-        `R$ ${(somaGeral / filtrados.length).toFixed(2)}`;
+        dataMin = dataRegistro;
+    }
 
-    document.getElementById('unidade-medida').innerText =
-        unidade;
+    /* 📅 POR ANO */
+    if (!porAno[ano])
+        porAno[ano] = {};
 
-    document.getElementById('max-geral').innerText =
-        `R$ ${maxGeral.toFixed(2)}`;
+    if (!porAno[ano][mes])
+        porAno[ano][mes] = [];
 
+    porAno[ano][mes].push(preco);
+
+    /* 📈 SAZONALIDADE */
+    if (!porMesGeral[mes])
+        porMesGeral[mes] = [];
+
+    porMesGeral[mes].push(preco);
+});
+
+/* 📌 RESUMO */
+document.getElementById('resumo').style.display = 'grid';
+
+document.getElementById('media-geral').innerText =
+    `R$ ${(somaGeral / filtrados.length).toFixed(2)}`;
+
+document.getElementById('unidade-medida').innerText =
+    unidade;
+
+/* 🔺 MAIOR PREÇO + DATA */
+document.getElementById('max-geral').innerHTML =
+    `R$ ${maxGeral.toFixed(2)}<br>
+     <span style="font-size:12px;color:#666;">
+     ${dataMax}
+     </span>`;
+
+/* 🔻 MENOR PREÇO + DATA */
+document.getElementById('min-geral').innerHTML =
+    `R$ ${minGeral.toFixed(2)}<br>
+     <span style="font-size:12px;color:#666;">
+     ${dataMin}
+     </span>`;
+    
     /* 📅 MESES */
     const mesesOrdem = [
         "janeiro",
