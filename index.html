@@ -356,7 +356,12 @@ canvas{
             <h3>Evolução de Preço por Ano</h3>
             <canvas id="chartAnual"></canvas>
         </div>
+        <div class="card-chart">
+    <h3>Análise Temporal do Período Selecionado</h3>
+    <canvas id="chartPeriodo"></canvas>
+</div>
     </div>
+    
     
     <h2 id="titulo-detalhado" style="margin-top:40px; color:#b71c1c; display:none;">Detalhamento Mensal por Ano</h2>
     <div class="charts-grid" id="grid-anos"></div>
@@ -366,12 +371,13 @@ canvas{
 let dadosRaw = [];
 let listaCharts = [];
 
-
+/* 🚀 CARREGAMENTO AUTOMÁTICO */
 window.onload = carregarDadosGit;
 
+/* 🔗 CARREGAR CSV DO GITHUB */
 function carregarDadosGit(){
 
-    const url = "https://raw.githubusercontent.com/nicol-le/Ceagesp/refs/heads/main/0089%20PRE%C3%87OS%20ETSP%20CEAGESP%202020%20A%202026_03%20UFSCAR%20HORTALI%C3%87AS%20-%202023%20A%202025%20(4).csv";
+    const url = "COLE_AQUI_SEU_LINK_RAW";
 
     document.getElementById('status').innerText =
         "Carregando dados do servidor...";
@@ -402,6 +408,7 @@ function carregarDadosGit(){
         },
 
         error: function(err){
+
             console.error(err);
 
             document.getElementById('status').innerText =
@@ -410,7 +417,7 @@ function carregarDadosGit(){
     });
 }
 
-
+/* 🔎 AUTOCOMPLETE CULTURAS */
 function popularDatalist(){
 
     let produtos = [
@@ -435,7 +442,7 @@ function popularDatalist(){
     });
 }
 
-
+/* 🌱 VARIEDADES */
 function atualizarVariedades(){
 
     const produtoSelecionado =
@@ -445,9 +452,12 @@ function atualizarVariedades(){
         .toUpperCase();
 
     let variedades = [
+
         ...new Set(
+
             dadosRaw
             .filter(d =>
+
                 d.Produto &&
                 d.Produto.toUpperCase() === produtoSelecionado
             )
@@ -457,13 +467,15 @@ function atualizarVariedades(){
     .filter(Boolean)
     .sort();
 
-    let dl = document.getElementById('variedades');
+    let dl =
+        document.getElementById('variedades');
 
     dl.innerHTML = "";
 
     variedades.forEach(v => {
 
-        let opt = document.createElement('option');
+        let opt =
+            document.createElement('option');
 
         opt.value = v;
 
@@ -471,13 +483,37 @@ function atualizarVariedades(){
     });
 }
 
-
+/* 🔄 EVENTO */
 document
 .getElementById('produtoInput')
 .addEventListener('change', atualizarVariedades);
 
+/* 📅 CONVERTER MÊS */
+function converterMesNumero(nomeMes){
 
-function processarAnalise() {
+    const meses = {
+
+        janeiro: "01",
+        fevereiro: "02",
+        março: "03",
+        abril: "04",
+        maio: "05",
+        junho: "06",
+        julho: "07",
+        agosto: "08",
+        setembro: "09",
+        outubro: "10",
+        novembro: "11",
+        dezembro: "12"
+    };
+
+    return meses[
+        (nomeMes || "").toLowerCase()
+    ] || "01";
+}
+
+/* 📊 PROCESSAMENTO */
+function processarAnalise(){
 
     const prodSelecionado =
         document
@@ -491,19 +527,33 @@ function processarAnalise() {
         .value
         .toUpperCase();
 
-    if (!prodSelecionado) {
+    const dataInicial =
+        document
+        .getElementById('dataInicial')
+        .value;
+
+    const dataFinal =
+        document
+        .getElementById('dataFinal')
+        .value;
+
+    if(!prodSelecionado){
 
         alert("Selecione um produto");
 
         return;
     }
 
+    /* 🔥 LIMPAR */
     listaCharts.forEach(c => c.destroy());
 
     listaCharts = [];
 
-    document.getElementById('grid-anos').innerHTML = "";
+    document
+    .getElementById('grid-anos')
+    .innerHTML = "";
 
+    /* 🔎 FILTRO */
     const filtrados = dadosRaw.filter(d => {
 
         let produtoOK =
@@ -511,103 +561,156 @@ function processarAnalise() {
             d.Produto.toUpperCase() === prodSelecionado;
 
         let variedadeOK =
+
             !variedadeSelecionada ||
+
             (
                 d.Variedade &&
                 d.Variedade.toUpperCase() === variedadeSelecionada
             );
 
-        return produtoOK && variedadeOK;
+        /* 📅 DATA */
+
+        let dia =
+            String(d.DIA).padStart(2,'0');
+
+        let mesNumero =
+            converterMesNumero(d.MÊS);
+
+        let dataRegistro =
+            `${d.ano}-${mesNumero}-${dia}`;
+
+        let dataOK = true;
+
+        if(dataInicial &&
+           dataRegistro < dataInicial)
+
+            dataOK = false;
+
+        if(dataFinal &&
+           dataRegistro > dataFinal)
+
+            dataOK = false;
+
+        return produtoOK &&
+               variedadeOK &&
+               dataOK;
     });
 
-    if (filtrados.length === 0) {
+    if(filtrados.length === 0){
 
         alert("Nenhum dado encontrado.");
 
         return;
     }
 
-let porAno = {};
+    /* 📦 ORGANIZAÇÃO */
+    let porAno = {};
 
-let porMesGeral = {};
+    let porMesGeral = {};
 
-let somaGeral = 0;
+    let somaGeral = 0;
 
-let maxGeral = 0;
-let minGeral = Infinity;
+    let maxGeral = 0;
 
-let dataMax = "";
-let dataMin = "";
+    let minGeral = Infinity;
 
-let unidade = filtrados[0].Unidade || "KG";
+    let dataMax = "";
 
-filtrados.forEach(d => {
+    let dataMin = "";
 
-    let preco =
-        parseFloat(
-            String(d.Comum)
-            .replace(',', '.')
-        );
+    let unidade =
+        filtrados[0].Unidade || "KG";
 
-    if (isNaN(preco)) return;
+    filtrados.forEach(d => {
 
-    let ano = d.ano;
+        let preco =
+            parseFloat(
+                String(d.Comum)
+                .replace(',', '.')
+            );
 
-    let mes = (d.MÊS || "").toLowerCase();
+        if(isNaN(preco)) return;
 
-    let dataRegistro =
-        `${d.DIA || "--"} / ${d.MÊS || "--"} / ${d.ano || "--"}`;
+        let ano = d.ano;
 
-    somaGeral += preco;
+        let mes =
+            (d.MÊS || "").toLowerCase();
 
-    if (preco > maxGeral){
+        let dataRegistro =
+            `${d.DIA || "--"} / ${d.MÊS || "--"} / ${d.ano || "--"}`;
 
-        maxGeral = preco;
+        somaGeral += preco;
 
-        dataMax = dataRegistro;
-    }
+        /* 🔺 MAIOR */
+        if(preco > maxGeral){
 
-    if (preco < minGeral){
+            maxGeral = preco;
 
-        minGeral = preco;
+            dataMax = dataRegistro;
+        }
 
-        dataMin = dataRegistro;
-    }
+        /* 🔻 MENOR */
+        if(preco < minGeral){
 
-    if (!porAno[ano])
-        porAno[ano] = {};
+            minGeral = preco;
 
-    if (!porAno[ano][mes])
-        porAno[ano][mes] = [];
+            dataMin = dataRegistro;
+        }
 
-    porAno[ano][mes].push(preco);
+        /* 📅 POR ANO */
+        if(!porAno[ano])
+            porAno[ano] = {};
 
-    if (!porMesGeral[mes])
-        porMesGeral[mes] = [];
+        if(!porAno[ano][mes])
+            porAno[ano][mes] = [];
 
-    porMesGeral[mes].push(preco);
-});
-document.getElementById('resumo').style.display = 'grid';
+        porAno[ano][mes].push(preco);
 
-document.getElementById('media-geral').innerText =
+        /* 📈 SAZONALIDADE */
+        if(!porMesGeral[mes])
+            porMesGeral[mes] = [];
+
+        porMesGeral[mes].push(preco);
+    });
+
+    /* 📌 RESUMO */
+    document
+    .getElementById('resumo')
+    .style.display = 'grid';
+
+    document
+    .getElementById('media-geral')
+    .innerText =
     `R$ ${(somaGeral / filtrados.length).toFixed(2)}`;
 
-document.getElementById('unidade-medida').innerText =
-    unidade;
+    document
+    .getElementById('unidade-medida')
+    .innerText = unidade;
 
-document.getElementById('max-geral').innerHTML =
+    /* 🔺 MAIOR */
+    document
+    .getElementById('max-geral')
+    .innerHTML =
+
     `R$ ${maxGeral.toFixed(2)}<br>
-     <span style="font-size:12px;color:#666;">
-     ${dataMax}
-     </span>`;
+    <span style="font-size:12px;color:#666;">
+    ${dataMax}
+    </span>`;
 
-document.getElementById('min-geral').innerHTML =
+    /* 🔻 MENOR */
+    document
+    .getElementById('min-geral')
+    .innerHTML =
+
     `R$ ${minGeral.toFixed(2)}<br>
-     <span style="font-size:12px;color:#666;">
-     ${dataMin}
-     </span>`;
-    
+    <span style="font-size:12px;color:#666;">
+    ${dataMin}
+    </span>`;
+
+    /* 📅 MESES */
     const mesesOrdem = [
+
         "janeiro",
         "fevereiro",
         "março",
@@ -622,31 +725,45 @@ document.getElementById('min-geral').innerHTML =
         "dezembro"
     ];
 
+    /* 📊 SAZONALIDADE */
     let valoresSazonalidade =
+
         mesesOrdem.map(m => {
 
-            let v = porMesGeral[m] || [];
+            let v =
+                porMesGeral[m] || [];
 
             return v.length
+
                 ? (
+
                     v.reduce((a,b)=>a+b,0)
                     / v.length
+
                   ).toFixed(2)
+
                 : 0;
         });
 
     gerarChart(
+
         "chartSazonalidade",
+
         "bar",
+
         mesesOrdem,
+
         valoresSazonalidade,
+
         `Média Histórica (R$ / ${unidade})`
     );
 
+    /* 📈 EVOLUÇÃO */
     let anosLabels =
         Object.keys(porAno).sort();
 
     let valoresAnuais =
+
         anosLabels.map(a => {
 
             let soma = 0;
@@ -667,13 +784,76 @@ document.getElementById('min-geral').innerHTML =
         });
 
     gerarChart(
+
         "chartAnual",
+
         "line",
+
         anosLabels,
+
         valoresAnuais,
+
         "Média por Ano (R$)"
     );
-    document.getElementById('titulo-detalhado')
+
+    /* 📈 GRÁFICO TEMPORAL */
+
+    let datasAgrupadas = {};
+
+    filtrados.forEach(d => {
+
+        let preco =
+            parseFloat(
+                String(d.Comum)
+                .replace(',', '.')
+            );
+
+        if(isNaN(preco)) return;
+
+        let chave =
+            `${d.MÊS}/${d.ano}`;
+
+        if(!datasAgrupadas[chave])
+            datasAgrupadas[chave] = [];
+
+        datasAgrupadas[chave].push(preco);
+    });
+
+    let labelsPeriodo =
+        Object.keys(datasAgrupadas);
+
+    let valoresPeriodo =
+
+        labelsPeriodo.map(l => {
+
+            let arr =
+                datasAgrupadas[l];
+
+            return (
+
+                arr.reduce((a,b)=>a+b,0)
+                / arr.length
+
+            ).toFixed(2);
+        });
+
+    gerarChart(
+
+        "chartPeriodo",
+
+        "line",
+
+        labelsPeriodo,
+
+        valoresPeriodo,
+
+        "Preço Médio no Período"
+    );
+
+    /* 📊 GRÁFICOS POR ANO */
+
+    document
+    .getElementById('titulo-detalhado')
     .style.display = 'block';
 
     anosLabels.forEach(ano => {
@@ -684,41 +864,61 @@ document.getElementById('min-geral').innerHTML =
         div.className = 'card-chart';
 
         div.innerHTML =
-            `<h3>Ano: ${ano}</h3>
-             <canvas id="chart-${ano}"></canvas>`;
+
+        `<h3>Ano: ${ano}</h3>
+        <canvas id="chart-${ano}"></canvas>`;
 
         document
         .getElementById('grid-anos')
         .appendChild(div);
 
         let valoresMesesAno =
+
             mesesOrdem.map(m => {
 
                 let v =
                     porAno[ano][m] || [];
 
                 return v.length
+
                     ? (
+
                         v.reduce((a,b)=>a+b,0)
                         / v.length
+
                       ).toFixed(2)
+
                     : 0;
             });
 
         gerarChart(
+
             `chart-${ano}`,
+
             "bar",
+
             mesesOrdem,
+
             valoresMesesAno,
+
             `Preços em ${ano}`
         );
     });
 }
 
-function gerarChart(id, tipo, labels, data, label){
+/* 📊 GRÁFICOS */
+function gerarChart(
+    id,
+    tipo,
+    labels,
+    data,
+    label
+){
 
     let canvas =
         document.getElementById(id);
+
+    if(!canvas) return;
 
     let dpi =
         window.devicePixelRatio || 1;
@@ -726,39 +926,50 @@ function gerarChart(id, tipo, labels, data, label){
     let rect =
         canvas.getBoundingClientRect();
 
-    canvas.width = rect.width * dpi;
+    canvas.width =
+        rect.width * dpi;
 
-    canvas.height = rect.height * dpi;
+    canvas.height =
+        rect.height * dpi;
 
     let ctx =
         canvas.getContext('2d');
 
-    ctx.scale(dpi, dpi);
+    ctx.scale(dpi,dpi);
 
     const chart = new Chart(ctx, {
 
         type: tipo,
 
         data: {
+
             labels: labels,
 
             datasets: [{
+
                 label: label,
 
                 data: data,
 
                 backgroundColor:
+
                     tipo === 'line'
-                    ? 'transparent'
+
+                    ? 'rgba(183,28,28,0.08)'
+
                     : 'rgba(183,28,28,0.7)',
 
                 borderColor: '#b71c1c',
 
-                borderWidth: 2,
+                borderWidth: 3,
 
-                tension: 0.3,
+                tension: 0.35,
 
-                fill: true
+                fill: true,
+
+                pointRadius: 4,
+
+                pointHoverRadius: 7
             }]
         },
 
@@ -768,19 +979,28 @@ function gerarChart(id, tipo, labels, data, label){
 
             maintainAspectRatio: false,
 
-            scales: {
-                y: {
-                    beginAtZero: false
-                }
+            interaction: {
+                mode: 'index',
+                intersect: false
             },
 
             plugins: {
+
                 legend: {
+
                     labels: {
+
                         font: {
                             size: 13
                         }
                     }
+                }
+            },
+
+            scales: {
+
+                y: {
+                    beginAtZero: false
                 }
             }
         }
