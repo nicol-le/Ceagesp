@@ -370,10 +370,6 @@ canvas{
     <h3>Análise Temporal do Período Selecionado</h3>
     <canvas id="chartPeriodo"></canvas>
 </div>
-        <div class="card-chart">
-    <h3>Evolução Temporal</h3>
-    <canvas id="chartPeriodo"></canvas>
-</div>
     </div>
     
     
@@ -394,57 +390,65 @@ async function carregarDadosGit(){
     document.getElementById('status').innerText =
         "Carregando dados do servidor...";
 
-    /* 🔗 RAWs */
+    const arquivos = [
 
-   const arquivos = [
+        "https://raw.githubusercontent.com/nicol-le/Ceagesp/main/0089%20PRE%C3%87OS%20ETSP%20CEAGESP%202020%20A%202026_03%20UFSCAR%20HORTALI%C3%87AS%20-%202023%20A%202025%20(4).csv",
 
-"https://raw.githubusercontent.com/nicol-le/Ceagesp/main/0089%20PRE%C3%87OS%20ETSP%20CEAGESP%202020%20A%202026_03%20UFSCAR%20HORTALI%C3%87AS%20-%202023%20A%202025%20(4).csv",
+        "https://raw.githubusercontent.com/nicol-le/Ceagesp/main/0089%20PRE%C3%87OS%20ETSP%20CEAGESP%202020%20A%202026_03%20UFSCAR%20HORTALI%C3%87AS%20-%202023%20A%202025%20(3).csv"
+    ];
 
-"https://raw.githubusercontent.com/nicol-le/Ceagesp/main/0089%20PRE%C3%87OS%20ETSP%20CEAGESP%202020%20A%202026_03%20UFSCAR%20HORTALI%C3%87AS%20-%202023%20A%202025%20(3).csv"
-
-];
     dadosRaw = [];
 
     try{
 
         for(const url of arquivos){
 
-            /* 📥 DOWNLOAD */
+            await new Promise((resolve,reject)=>{
 
-            const response =
-                await fetch(url);
+                Papa.parse(url,{
 
-            const csv =
-                await response.text();
+                    download:true,
 
-            /* 📊 PARSE */
+                    header:true,
 
-            const resultado =
-                Papa.parse(csv, {
+                    skipEmptyLines:true,
 
-                    header: true,
+                    worker:true,
 
-                    skipEmptyLines: true
-                });
+                    complete:function(results){
 
-            /* 🧹 LIMPEZA */
+                        const dadosLimpos =
 
-            const dadosLimpos =
-                resultado.data.map(row => {
+                            results.data.map(row=>{
 
-                    let novo = {};
+                                let novo = {};
 
-                    for(let k in row){
+                                for(let k in row){
 
-                        novo[k.trim()] = row[k];
+                                    novo[k.trim()] = row[k];
+                                }
+
+                                return novo;
+                            });
+
+                        dadosRaw.push(...dadosLimpos);
+
+                        console.log(
+                            "Arquivo carregado:",
+                            dadosLimpos.length
+                        );
+
+                        resolve();
+                    },
+
+                    error:function(err){
+
+                        console.error(err);
+
+                        reject(err);
                     }
-
-                    return novo;
                 });
-
-            /* ➕ JUNTAR */
-
-            dadosRaw.push(...dadosLimpos);
+            });
         }
 
         document.getElementById('status').innerText =
@@ -461,7 +465,6 @@ async function carregarDadosGit(){
             "Erro ao carregar dados";
     }
 }
-
 /* 🔎 AUTOCOMPLETE CULTURAS */
 function popularDatalist(){
 
