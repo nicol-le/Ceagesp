@@ -3,1020 +3,366 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard CEAGESP - Evolução de Preços</title>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <title>CEAGESP | Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=JetBrains+Mono:wght@500;800&display=swap" rel="stylesheet">
     <style>
-       
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
-body{
-    font-family:'Segoe UI',sans-serif;
-    background:#f4f6f9;
-    color:#2c2c2c;
-}
-header{
-    background:linear-gradient(135deg,#8B0000,#c62828);
-    color:white;
-    padding:18px 35px;
-
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-
-    box-shadow:0 4px 20px rgba(0,0,0,0.2);
-
-    position:sticky;
-    top:0;
-    z-index:1000;
-}
-
-header h2{
-    font-size:28px;
-    font-weight:700;
-    letter-spacing:1px;
-}
-
-#status-container{
-    background:rgba(255,255,255,0.15);
-    padding:10px 18px;
-    border-radius:12px;
-    backdrop-filter:blur(8px);
-    font-weight:600;
-}
-.container{
-    max-width:1600px;
-    margin:auto;
-    padding:30px;
-}
-.box{
-    background:white;
-
-    border-radius:20px;
-
-    padding:25px;
-
-    margin-bottom:25px;
-
-    box-shadow:
-    0 4px 15px rgba(0,0,0,0.05);
-
-    transition:0.3s;
-}
-
-.box:hover{
-    transform:translateY(-2px);
-}
-
-.filters{
-    display:flex;
-    flex-wrap:wrap;
-    gap:20px;
-    align-items:flex-end;
-}
-
-.filters label{
-    font-size:14px;
-    font-weight:700;
-    color:#666;
-    margin-bottom:6px;
-    display:block;
-}
-
-
-
-input{
-    width:100%;
-    padding:14px;
-
-    border-radius:12px;
-
-    border:1px solid #ddd;
-
-    background:#fafafa;
-
-    transition:0.3s;
-
-    font-size:15px;
-}
-
-input:focus{
-    border-color:#b71c1c;
-    background:white;
-
-    box-shadow:
-    0 0 0 4px rgba(183,28,28,0.1);
-}
-
-
-
-button{
-    padding:14px 22px;
-
-    border:none;
-
-    border-radius:12px;
-
-    background:linear-gradient(
-        135deg,
-        #b71c1c,
-        #d32f2f
-    );
-
-    color:white;
-
-    font-weight:700;
-
-    cursor:pointer;
-
-    transition:0.3s;
-
-    box-shadow:
-    0 4px 12px rgba(183,28,28,0.25);
-}
-
-button:hover{
-
-    transform:translateY(-2px);
-
-    box-shadow:
-    0 8px 20px rgba(183,28,28,0.35);
-}
-
-
-
-.stats-row{
-
-    display:grid;
-
-    grid-template-columns:
-    repeat(auto-fit,minmax(240px,1fr));
-
-    gap:20px;
-
-    margin-bottom:25px;
-}
-
-.stat-card{
-
-    background:white;
-
-    border-radius:18px;
-
-    padding:22px;
-
-    position:relative;
-
-    overflow:hidden;
-
-    box-shadow:
-    0 6px 18px rgba(0,0,0,0.06);
-
-    transition:0.3s;
-}
-
-.stat-card:hover{
-    transform:translateY(-4px);
-}
-
-.stat-card::before{
-
-    content:"";
-
-    position:absolute;
-
-    top:0;
-    left:0;
-
-    width:100%;
-    height:6px;
-
-    background:linear-gradient(
-        90deg,
-        #b71c1c,
-        #ff5252
-    );
-}
-
-.stat-card h4{
-    color:#777;
-    font-size:14px;
-    margin-bottom:12px;
-}
-
-.stat-card p{
-    font-size:28px;
-    font-weight:800;
-    color:#b71c1c;
-}
-
-
-.charts-grid{
-
-    display:grid;
-
-    grid-template-columns:
-    repeat(auto-fit,minmax(500px,1fr));
-
-    gap:25px;
-}
-
-.card-chart{
-
-    background:white;
-
-    border-radius:22px;
-
-    padding:25px;
-
-    box-shadow:
-    0 6px 20px rgba(0,0,0,0.05);
-
-    transition:0.3s;
-}
-
-.card-chart:hover{
-    transform:translateY(-3px);
-}
-
-.card-chart h3{
-
-    color:#b71c1c;
-
-    margin-bottom:18px;
-
-    font-size:20px;
-
-    border-bottom:1px solid #eee;
-
-    padding-bottom:12px;
-}
-
-
-
-canvas{
-
-    width:100% !important;
-
-    height:360px !important;
-}
-
-
-
-#titulo-detalhado{
-
-    margin-top:45px;
-
-    margin-bottom:25px;
-
-    color:#8B0000;
-
-    font-size:30px;
-
-    font-weight:800;
-}
-
-
-
-#status{
-    color:#fff;
-    font-weight:700;
-}
-
-
-
-@media(max-width:900px){
-
-    .charts-grid{
-        grid-template-columns:1fr;
-    }
-
-    .filters{
-        flex-direction:column;
-    }
-
-    header{
-        flex-direction:column;
-        gap:10px;
-        text-align:center;
-    }
-
-    header h2{
-        font-size:22px;
-    }
-}
+        :root {
+            --primary: #8B0000;
+            --accent: #b71c1c;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666;
+        }
+
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Inter', sans-serif;background:var(--bg);color:var(--text-main);-webkit-font-smoothing:antialiased;}
+        
+        header{
+            background:linear-gradient(135deg, var(--primary), var(--accent));
+            color:white;padding:15px 40px;display:flex;justify-content:space-between;
+            align-items:center;box-shadow:0 4px 12px rgba(0,0,0,0.1);
+        }
+        header h2{font-weight:800;letter-spacing:-0.5px;text-transform:uppercase;font-size:1.3rem;}
+        #status{font-family:'JetBrains Mono', monospace;font-size:0.7rem;background:rgba(0,0,0,0.2);padding:4px 12px;border-radius:20px;}
+
+        .container{max-width:1600px;margin:auto;padding:25px;}
+
+        /* Filtros */
+        .box-filtros{
+            background:white;padding:25px;border-radius:16px;margin-bottom:25px;
+            display:grid;grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap:20px;box-shadow:0 2px 15px rgba(0,0,0,0.03);border:1px solid #eee;
+        }
+        label{display:block;font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;letter-spacing:0.5px;}
+        input{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-family:'Inter', sans-serif;font-size:0.9rem;}
+        
+        .btn-main{
+            background:var(--primary);color:white;border:none;padding:12px;
+            border-radius:10px;font-weight:800;cursor:pointer;transition:0.3s;
+            text-transform:uppercase;font-size:0.8rem;
+        }
+        .btn-main:hover{background:#600000;transform:translateY(-2px);box-shadow:0 4px 12px rgba(139,0,0,0.2);}
+
+        /* Controles de Tempo */
+        .time-controls{display:flex;gap:8px;margin-bottom:20px;}
+        .btn-time{
+            padding:8px 18px;border:1px solid #ddd;background:white;
+            color:var(--text-muted);border-radius:25px;cursor:pointer;
+            font-size:11px;font-weight:700;transition:0.2s;
+        }
+        .btn-time.active{background:var(--primary);color:white;border-color:var(--primary);}
+
+        /* Stats Bloomberg Style */
+        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px, 1fr));gap:20px;margin-bottom:25px;}
+        .stat-card{
+            background:white;padding:20px;border-radius:16px;text-align:left;
+            border-bottom:4px solid var(--primary);box-shadow:0 2px 10px rgba(0,0,0,0.02);
+        }
+        .stat-card h4{font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;font-weight:800;}
+        .stat-card p{font-size:24px;font-weight:800;font-family:'JetBrains Mono', monospace;color:var(--primary);}
+
+        /* Gráficos Estáveis */
+        .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(600px, 1fr));gap:25px;}
+        .chart-container{
+            background:white;padding:25px;border-radius:20px;
+            box-shadow:0 2px 15px rgba(0,0,0,0.02);border:1px solid #f0f0f0;
+            height:450px; /* Altura fixa para evitar esticamento */
+            position: relative;
+        }
+        .chart-container h3{font-size:14px;margin-bottom:20px;border-left:4px solid var(--primary);padding-left:12px;font-weight:800;text-transform:uppercase;}
+        
+        .insight-text{margin-top:15px;padding:12px;background:#fff8f8;border-radius:10px;font-size:12px;color:#444;line-height:1.4;border:1px solid #ffeaea;}
+        
+        #grid-anos{margin-top:40px;display:grid;grid-template-columns:repeat(auto-fit, minmax(350px, 1fr));gap:25px;}
+        .mini-chart{height:300px !important;} /* Altura para os gráficos anuais */
     </style>
 </head>
 <body>
 
 <header>
-    <h2>CEAGESP - Painel de Preços</h2>
-   <div id="status-container">Arquivo: <span id="status">Pendente</span></div>
+    <h2>CEAGESP </h2>
+    <div id="status">SISTEMA ONLINE</div>
 </header>
 
 <div class="container">
-    <div class="box">
-     
-        <div class="filters" style="margin-top: 15px;">
-            <div style="flex:1">
-                <label>Cultura:</label><br>
-                <input list="produtos" id="produtoInput" placeholder="Ex: BANANA" style="width:100%">
-                <datalist id="produtos"></datalist>
-            </div>
-            <div style="flex:1">
-    <label>Variedade:</label><br>
-    <input list="variedades" id="variedadeInput"
-           placeholder="Ex: PRATA"
-           style="width:100%">
-    <datalist id="variedades"></datalist>
-</div>
-              <div>
-        <label>Data Inicial</label>
-        <input type="date" id="dataInicial">
+    <div class="box-filtros">
+        <div><label>Produto</label><input list="listProd" id="prodInp" onchange="loadVariedades()" placeholder="Busca..."><datalist id="listProd"></datalist></div>
+        <div><label>Variedade</label><input list="listVar" id="varInp" placeholder="Todas"><datalist id="listVar"></datalist></div>
+        <div><label>Início</label><input type="date" id="dateIni"></div>
+        <div><label>Fim</label><input type="date" id="dateFim"></div>
+        <button class="btn-main" onclick="processar()">Executar</button>
     </div>
 
-    <div>
-        <label>Data Final</label>
-        <input type="date" id="dataFinal">
+    <div class="time-controls" id="timeControls" style="display:none;">
+        <button class="btn-time active" onclick="changeGranularity('diario', this)">DIÁRIO</button>
+        <button class="btn-time" onclick="changeGranularity('semanal', this)">SEMANAL</button>
+        <button class="btn-time" onclick="changeGranularity('mensal', this)">MENSAL</button>
     </div>
 
-            <button onclick="processarAnalise()">Gerar Análise Completa</button>
+    <div class="stats-grid" id="statsRow" style="display:none;">
+        <div class="stat-card"><h4>Média Período</h4><p id="st-media">--</p></div>
+        <div class="stat-card"><h4>Mínimo</h4><p id="st-min">--</p></div>
+        <div class="stat-card"><h4>Máximo</h4><p id="st-max">--</p></div>
+        <div class="stat-card"><h4>Correlação R</h4><p id="st-pearson">--</p></div>
+    </div>
+
+    <div class="charts-grid">
+        <div class="chart-container">
+            <h3>Sazonalidade Histórica</h3>
+            <canvas id="chSazonal"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>Tendência de Preços</h3>
+            <canvas id="chEvolucao"></canvas>
+        </div>
+        <div class="chart-container" id="boxTemp">
+            <h3>Correlação: Temperatura x Preço</h3>
+            <canvas id="chTemp"></canvas>
+        </div>
+        <div class="chart-container" id="boxChuva">
+            <h3>Correlação: Chuva x Preço</h3>
+            <canvas id="chChuva"></canvas>
         </div>
     </div>
 
-    <div class="stats-row" id="resumo" style="display:none;">
-        <div class="stat-card"><h4>Média Histórica (Todos os Anos)</h4><p id="media-geral">R$ 0,00</p></div>
-        <div class="stat-card"><h4>Unidade de Medida</h4><p id="unidade-medida">-</p></div>
-        <div class="stat-card"><h4>Menor Preço Registrado</h4><p id="min-geral">R$ 0,00</p></div>
-        <div class="stat-card"><h4>Maior Preço Registrado</h4><p id="max-geral">R$ 0,00</p></div>
-
-    </div>
-
-    <div class="charts-grid" id="dashboard">
-        <div class="card-chart">
-            <h3>Média Mensal (Sazonalidade)</h3>
-            <canvas id="chartSazonalidade"></canvas>
-        </div>
-        <div class="card-chart">
-            <h3>Evolução de Preço por Ano</h3>
-            <canvas id="chartAnual"></canvas>
-        </div>
-        <div class="card-chart">
-    <h3>Análise Temporal do Período Selecionado</h3>
-    <canvas id="chartPeriodo"></canvas>
+    <h2 style="margin-top:50px; color:var(--primary); font-size:1.2rem; text-transform:uppercase; font-weight:800;">Histórico por Ciclo Anual</h2>
+    <div id="grid-anos"></div>
 </div>
-    </div>
-    
-    
-    <h2 id="titulo-detalhado" style="margin-top:40px; color:#b71c1c; display:none;">Detalhamento Mensal por Ano</h2>
-    <div class="charts-grid" id="grid-anos"></div>
-</div>
-  
+
 <script>
-let dadosRaw = [];
-let listaCharts = [];
+// Configurações Globais de Gráficos (Anti-borrão)
+Chart.defaults.devicePixelRatio = window.devicePixelRatio || 1;
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.color = '#777';
 
-/* 🚀 CARREGAMENTO AUTOMÁTICO */
-window.onload = carregarDadosGit;
+const SUPABASE_URL = 'https://nmkxkebbuouxhtqtdtys.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ta3hrZWJidW91eGh0cXRkdHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMTcwNDgsImV4cCI6MjA5NDg5MzA0OH0.uWzPvdd7k1CDhLFt8oA7mm-FIePSFD6VhPYJcAkRjps';
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/* 🔗 CARREGAR CSV DO GITHUB */
-function carregarDadosGit(){
+let rawPrecos = [], rawClima = [], charts = {}, currentGranularity = 'diario';
 
-    const url = "https://raw.githubusercontent.com/nicol-le/Ceagesp/refs/heads/main/0089%20PRE%C3%87OS%20ETSP%20CEAGESP%202020%20A%202026_03%20UFSCAR%20HORTALI%C3%87AS%20-%202023%20A%202025%20(4).csv";
+window.onload = async () => {
+    const { data } = await _sb.from('ceagesp').select('produto');
+    const prods = [...new Set(data.map(i => i.produto))].sort();
+    const list = document.getElementById('listProd');
+    prods.forEach(p => { let o = document.createElement('option'); o.value = p; list.appendChild(o); });
+};
 
-    document.getElementById('status').innerText =
-        "Carregando dados do servidor...";
-
-    Papa.parse(url, {
-        download: true,
-        header: true,
-        skipEmptyLines: true,
-        worker: true,
-
-        complete: function(results){
-
-            dadosRaw = results.data.map(row => {
-
-                let novo = {};
-
-                for(let k in row){
-                    novo[k.trim()] = row[k];
-                }
-
-                return novo;
-            });
-
-            document.getElementById('status').innerText =
-                "Dados carregados automaticamente!";
-
-            popularDatalist();
-        },
-
-        error: function(err){
-
-            console.error(err);
-
-            document.getElementById('status').innerText =
-                "Erro ao carregar dados!";
-        }
-    });
+async function loadVariedades() {
+    const p = document.getElementById('prodInp').value;
+    const { data } = await _sb.from('ceagesp').select('variedade').eq('produto', p);
+    const vars = [...new Set(data.map(i => i.variedade))].sort();
+    const list = document.getElementById('listVar'); list.innerHTML = "";
+    vars.forEach(v => { let o = document.createElement('option'); o.value = v; list.appendChild(o); });
 }
 
-/* 🔎 AUTOCOMPLETE CULTURAS */
-function popularDatalist(){
-
-    let produtos = [
-        ...new Set(
-            dadosRaw.map(d => d.Produto)
-        )
-    ]
-    .filter(Boolean)
-    .sort();
-
-    let dl = document.getElementById('produtos');
-
-    dl.innerHTML = "";
-
-    produtos.forEach(p => {
-
-        let opt = document.createElement('option');
-
-        opt.value = p;
-
-        dl.appendChild(opt);
-    });
+function toYMD(d) {
+    if(!d) return null;
+    let date = new Date(d);
+    return isNaN(date) ? null : date.toISOString().split('T')[0];
 }
 
-/* 🌱 VARIEDADES */
-function atualizarVariedades(){
-
-    const produtoSelecionado =
-        document
-        .getElementById('produtoInput')
-        .value
-        .toUpperCase();
-
-    let variedades = [
-
-        ...new Set(
-
-            dadosRaw
-            .filter(d =>
-
-                d.Produto &&
-                d.Produto.toUpperCase() === produtoSelecionado
-            )
-            .map(d => d.Variedade)
-        )
-    ]
-    .filter(Boolean)
-    .sort();
-
-    let dl =
-        document.getElementById('variedades');
-
-    dl.innerHTML = "";
-
-    variedades.forEach(v => {
-
-        let opt =
-            document.createElement('option');
-
-        opt.value = v;
-
-        dl.appendChild(opt);
-    });
+function getPearson(pts) {
+    const n = pts.length; if(n<2) return 0;
+    let x=pts.map(p=>p.x), y=pts.map(p=>p.y);
+    let sx=x.reduce((a,b)=>a+b), sy=y.reduce((a,b)=>a+b);
+    let sxy=x.reduce((a,b,i)=>a+b*y[i],0), sx2=x.reduce((a,b)=>a+b*b,0), sy2=y.reduce((a,b)=>a+b*b,0);
+    let num = n*sxy - sx*sy;
+    let den = Math.sqrt((n*sx2 - sx*sx)*(n*sy2 - sy*sy));
+    return den === 0 ? 0 : num/den;
 }
 
-/* 🔄 EVENTO */
-document
-.getElementById('produtoInput')
-.addEventListener('change', atualizarVariedades);
-
-/* 📅 CONVERTER MÊS */
-function converterMesNumero(nomeMes){
-
-    const meses = {
-
-        janeiro: "01",
-        fevereiro: "02",
-        março: "03",
-        abril: "04",
-        maio: "05",
-        junho: "06",
-        julho: "07",
-        agosto: "08",
-        setembro: "09",
-        outubro: "10",
-        novembro: "11",
-        dezembro: "12"
-    };
-
-    return meses[
-        (nomeMes || "").toLowerCase()
-    ] || "01";
+function getRegLine(pts) {
+    if(pts.length < 2) return [];
+    let x=pts.map(p=>p.x), y=pts.map(p=>p.y), n=pts.length;
+    let sx=x.reduce((a,b)=>a+b), sy=y.reduce((a,b)=>a+b);
+    let sxy=x.reduce((a,b,i)=>a+b*y[i],0), sx2=x.reduce((a,b)=>a+b*b,0);
+    let m = (n*sxy - sx*sy)/(n*sx2 - sx*sx);
+    let b = (sy - m*sx)/n;
+    let minX = Math.min(...x), maxX = Math.max(...x);
+    return [{x: minX, y: m*minX+b}, {x: maxX, y: m*maxX+b}];
 }
 
-/* 📊 PROCESSAMENTO */
-function processarAnalise(){
+async function processar() {
+    const prod = document.getElementById('prodInp').value;
+    if(!prod) return alert("Selecione o produto");
+    
+    document.getElementById('status').innerText = "CALCULANDO...";
+    let query = _sb.from('ceagesp').select('*').eq('produto', prod);
+    if(document.getElementById('varInp').value) query = query.eq('variedade', document.getElementById('varInp').value);
+    const { data: pData } = await query;
+    rawPrecos = pData;
 
-    const prodSelecionado =
-        document
-        .getElementById('produtoInput')
-        .value
-        .toUpperCase();
-
-    const variedadeSelecionada =
-        document
-        .getElementById('variedadeInput')
-        .value
-        .toUpperCase();
-
-    const dataInicial =
-        document
-        .getElementById('dataInicial')
-        .value;
-
-    const dataFinal =
-        document
-        .getElementById('dataFinal')
-        .value;
-
-    if(!prodSelecionado){
-
-        alert("Selecione um produto");
-
-        return;
+    let cAll = [];
+    for(let i=0; i<3; i++) {
+        const { data } = await _sb.from('clima_diario').select('*').range(i*1000, (i+1)*1000 - 1);
+        if(data) cAll = [...cAll, ...data];
     }
-
-    /* 🔥 LIMPAR */
-    listaCharts.forEach(c => c.destroy());
-
-    listaCharts = [];
-
-    document
-    .getElementById('grid-anos')
-    .innerHTML = "";
-
-    /* 🔎 FILTRO */
-    const filtrados = dadosRaw.filter(d => {
-
-        let produtoOK =
-            d.Produto &&
-            d.Produto.toUpperCase() === prodSelecionado;
-
-        let variedadeOK =
-
-            !variedadeSelecionada ||
-
-            (
-                d.Variedade &&
-                d.Variedade.toUpperCase() === variedadeSelecionada
-            );
-
-        /* 📅 DATA */
-
-        let dia =
-            String(d.DIA).padStart(2,'0');
-
-        let mesNumero =
-            converterMesNumero(d.MÊS);
-
-        let dataRegistro =
-            `${d.ano}-${mesNumero}-${dia}`;
-
-        let dataOK = true;
-
-        if(dataInicial &&
-           dataRegistro < dataInicial)
-
-            dataOK = false;
-
-        if(dataFinal &&
-           dataRegistro > dataFinal)
-
-            dataOK = false;
-
-        return produtoOK &&
-               variedadeOK &&
-               dataOK;
-    });
-
-    if(filtrados.length === 0){
-
-        alert("Nenhum dado encontrado.");
-
-        return;
-    }
-
-    /* 📦 ORGANIZAÇÃO */
-    let porAno = {};
-
-    let porMesGeral = {};
-
-    let somaGeral = 0;
-
-    let maxGeral = 0;
-
-    let minGeral = Infinity;
-
-    let dataMax = "";
-
-    let dataMin = "";
-
-    let unidade =
-        filtrados[0].Unidade || "KG";
-
-    filtrados.forEach(d => {
-
-        let preco =
-            parseFloat(
-                String(d.Comum)
-                .replace(',', '.')
-            );
-
-        if(isNaN(preco)) return;
-
-        let ano = d.ano;
-
-        let mes =
-            (d.MÊS || "").toLowerCase();
-
-        let dataRegistro =
-            `${d.DIA || "--"} / ${d.MÊS || "--"} / ${d.ano || "--"}`;
-
-        somaGeral += preco;
-
-        /* 🔺 MAIOR */
-        if(preco > maxGeral){
-
-            maxGeral = preco;
-
-            dataMax = dataRegistro;
-        }
-
-        /* 🔻 MENOR */
-        if(preco < minGeral){
-
-            minGeral = preco;
-
-            dataMin = dataRegistro;
-        }
-
-        /* 📅 POR ANO */
-        if(!porAno[ano])
-            porAno[ano] = {};
-
-        if(!porAno[ano][mes])
-            porAno[ano][mes] = [];
-
-        porAno[ano][mes].push(preco);
-
-        /* 📈 SAZONALIDADE */
-        if(!porMesGeral[mes])
-            porMesGeral[mes] = [];
-
-        porMesGeral[mes].push(preco);
-    });
-
-    /* 📌 RESUMO */
-    document
-    .getElementById('resumo')
-    .style.display = 'grid';
-
-    document
-    .getElementById('media-geral')
-    .innerText =
-    `R$ ${(somaGeral / filtrados.length).toFixed(2)}`;
-
-    document
-    .getElementById('unidade-medida')
-    .innerText = unidade;
-
-    /* 🔺 MAIOR */
-    document
-    .getElementById('max-geral')
-    .innerHTML =
-
-    `R$ ${maxGeral.toFixed(2)}<br>
-    <span style="font-size:12px;color:#666;">
-    ${dataMax}
-    </span>`;
-
-    /* 🔻 MENOR */
-    document
-    .getElementById('min-geral')
-    .innerHTML =
-
-    `R$ ${minGeral.toFixed(2)}<br>
-    <span style="font-size:12px;color:#666;">
-    ${dataMin}
-    </span>`;
-
-    /* 📅 MESES */
-    const mesesOrdem = [
-
-        "janeiro",
-        "fevereiro",
-        "março",
-        "abril",
-        "maio",
-        "junho",
-        "julho",
-        "agosto",
-        "setembro",
-        "outubro",
-        "novembro",
-        "dezembro"
-    ];
-
-    /* 📊 SAZONALIDADE */
-    let valoresSazonalidade =
-
-        mesesOrdem.map(m => {
-
-            let v =
-                porMesGeral[m] || [];
-
-            return v.length
-
-                ? (
-
-                    v.reduce((a,b)=>a+b,0)
-                    / v.length
-
-                  ).toFixed(2)
-
-                : 0;
-        });
-
-    gerarChart(
-
-        "chartSazonalidade",
-
-        "bar",
-
-        mesesOrdem,
-
-        valoresSazonalidade,
-
-        `Média Histórica (R$ / ${unidade})`
-    );
-
-    /* 📈 EVOLUÇÃO */
-    let anosLabels =
-        Object.keys(porAno).sort();
-
-    let valoresAnuais =
-
-        anosLabels.map(a => {
-
-            let soma = 0;
-
-            let cont = 0;
-
-            for(let m in porAno[a]){
-
-                soma +=
-                    porAno[a][m]
-                    .reduce((x,y)=>x+y,0);
-
-                cont +=
-                    porAno[a][m].length;
+    rawClima = cAll;
+
+    document.getElementById('timeControls').style.display = 'flex';
+    document.getElementById('statsRow').style.display = 'grid';
+    renderDashboard();
+    document.getElementById('status').innerText = "ONLINE";
+}
+
+function changeGranularity(g, btn) {
+    currentGranularity = g;
+    document.querySelectorAll('.btn-time').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderDashboard();
+}
+
+function renderDashboard() {
+    const ini = document.getElementById('dateIni').value;
+    const fim = document.getElementById('dateFim').value;
+
+    let filtrados = rawPrecos.map(p => ({ date: toYMD(p.data), val: parseFloat(p.comum) }))
+      .filter(p => p.date && (!ini || p.date >= ini) && (!fim || p.date <= fim))
+      .sort((a,b) => a.date.localeCompare(b.date));
+
+    let graficoEvolucao = [];
+    if(currentGranularity === 'diario') graficoEvolucao = filtrados;
+    else {
+        let grupos = {};
+        filtrados.forEach(f => {
+            let chave = f.date.substring(0, 7);
+            if(currentGranularity === 'semanal') {
+                let d = new Date(f.date);
+                chave = `${d.getFullYear()}-W${Math.ceil(d.getDate()/7)}`;
             }
-
-            return (soma / cont).toFixed(2);
+            if(!grupos[chave]) grupos[chave] = [];
+            grupos[chave].push(f.val);
         });
+        graficoEvolucao = Object.keys(grupos).map(k => ({ date: k, val: grupos[k].reduce((a,b)=>a+b)/grupos[k].length }));
+    }
 
-    gerarChart(
-
-        "chartAnual",
-
-        "line",
-
-        anosLabels,
-
-        valoresAnuais,
-
-        "Média por Ano (R$)"
-    );
-
-    /* 📈 GRÁFICO TEMPORAL */
-
-    let datasAgrupadas = {};
-
-    filtrados.forEach(d => {
-
-        let preco =
-            parseFloat(
-                String(d.Comum)
-                .replace(',', '.')
-            );
-
-        if(isNaN(preco)) return;
-
-        let chave =
-            `${d.MÊS}/${d.ano}`;
-
-        if(!datasAgrupadas[chave])
-            datasAgrupadas[chave] = [];
-
-        datasAgrupadas[chave].push(preco);
+    const mapaClima = {};
+    rawClima.forEach(c => {
+        let d = toYMD(c.data);
+        if(d) mapaClima[d] = { t: parseFloat(c.temperatura_media || c.temp || 0), c: parseFloat(c.chuva_mm || c.chuva || 0) };
     });
 
-    let labelsPeriodo =
-        Object.keys(datasAgrupadas);
-
-    let valoresPeriodo =
-
-        labelsPeriodo.map(l => {
-
-            let arr =
-                datasAgrupadas[l];
-
-            return (
-
-                arr.reduce((a,b)=>a+b,0)
-                / arr.length
-
-            ).toFixed(2);
-        });
-
-    gerarChart(
-
-        "chartPeriodo",
-
-        "line",
-
-        labelsPeriodo,
-
-        valoresPeriodo,
-
-        "Preço Médio no Período"
-    );
-
-    /* 📊 GRÁFICOS POR ANO */
-
-    document
-    .getElementById('titulo-detalhado')
-    .style.display = 'block';
-
-    anosLabels.forEach(ano => {
-
-        const div =
-            document.createElement('div');
-
-        div.className = 'card-chart';
-
-        div.innerHTML =
-
-        `<h3>Ano: ${ano}</h3>
-        <canvas id="chart-${ano}"></canvas>`;
-
-        document
-        .getElementById('grid-anos')
-        .appendChild(div);
-
-        let valoresMesesAno =
-
-            mesesOrdem.map(m => {
-
-                let v =
-                    porAno[ano][m] || [];
-
-                return v.length
-
-                    ? (
-
-                        v.reduce((a,b)=>a+b,0)
-                        / v.length
-
-                      ).toFixed(2)
-
-                    : 0;
-            });
-
-        gerarChart(
-
-            `chart-${ano}`,
-
-            "bar",
-
-            mesesOrdem,
-
-            valoresMesesAno,
-
-            `Preços em ${ano}`
-        );
+    let ptsTemp = [], ptsChuva = [];
+    filtrados.forEach(p => {
+        if(mapaClima[p.date]) {
+            if(mapaClima[p.date].t !== 0) ptsTemp.push({ x: mapaClima[p.date].t, y: p.val });
+            if(mapaClima[p.date].c !== 0) ptsChuva.push({ x: mapaClima[p.date].c, y: p.val });
+        }
     });
+
+    if(filtrados.length) {
+        const vals = filtrados.map(f => f.val);
+        document.getElementById('st-media').innerText = `R$ ${(vals.reduce((a,b)=>a+b)/vals.length).toFixed(2)}`;
+        document.getElementById('st-min').innerText = `R$ ${Math.min(...vals).toFixed(2)}`;
+        document.getElementById('st-max').innerText = `R$ ${Math.max(...vals).toFixed(2)}`;
+        document.getElementById('st-pearson').innerText = getPearson(ptsTemp).toFixed(2);
+    }
+
+    // Gráfico 1: Sazonalidade com Degradê Moderno
+    updateChart('chSazonal', 'bar', ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"], 
+        Array(12).fill(0).map((_,i) => {
+            let m = rawPrecos.filter(p => new Date(p.data).getMonth() === i);
+            return m.length ? (m.reduce((a,b)=>a+parseFloat(b.comum),0)/m.length).toFixed(2) : 0;
+        }), 'Preço Médio R$');
+
+    updateChart('chEvolucao', 'line', graficoEvolucao.map(g=>g.date), graficoEvolucao.map(g=>g.val), 'Evolução R$');
+    updateScatter('chTemp', ptsTemp, 'Temp ºC', 'boxTemp');
+    updateScatter('chChuva', ptsChuva, 'Chuva mm', 'boxChuva');
+    renderAnuais();
 }
 
-/* 📊 GRÁFICOS */
-function gerarChart(
-    id,
-    tipo,
-    labels,
-    data,
-    label
-){
+function updateChart(id, type, labels, data, label) {
+    if(charts[id]) charts[id].destroy();
+    const ctx = document.getElementById(id).getContext('2d');
+    
+    // Gradiente para tornar a cor do primeiro gráfico mais profissional
+    let fillStyle = 'rgba(139, 0, 0, 0.1)';
+    if(type === 'bar' || id === 'chEvolucao'){
+        let gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(139, 0, 0, 0.8)');
+        gradient.addColorStop(1, 'rgba(139, 0, 0, 0.05)');
+        fillStyle = gradient;
+    }
 
-    let canvas =
-        document.getElementById(id);
-
-    if(!canvas) return;
-
-    let dpi =
-        window.devicePixelRatio || 1;
-
-    let rect =
-        canvas.getBoundingClientRect();
-
-    canvas.width =
-        rect.width * dpi;
-
-    canvas.height =
-        rect.height * dpi;
-
-    let ctx =
-        canvas.getContext('2d');
-
-    ctx.scale(dpi,dpi);
-
-    const chart = new Chart(ctx, {
-
-        type: tipo,
-
-        data: {
-
-            labels: labels,
-
-            datasets: [{
-
-                label: label,
-
-                data: data,
-
-                backgroundColor:
-
-                    tipo === 'line'
-
-                    ? 'rgba(183,28,28,0.08)'
-
-                    : 'rgba(183,28,28,0.7)',
-
-                borderColor: '#b71c1c',
-
-                borderWidth: 3,
-
-                tension: 0.35,
-
-                fill: true,
-
-                pointRadius: 4,
-
-                pointHoverRadius: 7
-            }]
-        },
-
-        options: {
-
-            responsive: true,
-
+    charts[id] = new Chart(ctx, {
+        type: type,
+        data: { labels, datasets: [{ 
+            label, data, 
+            borderColor: '#8B0000', 
+            backgroundColor: fillStyle, 
+            fill: true,
+            borderWidth: 2,
+            tension: 0.3,
+            pointRadius: type === 'line' ? 2 : 0
+        }]},
+        options: { 
+            responsive: true, 
             maintainAspectRatio: false,
-
-            interaction: {
-                mode: 'index',
-                intersect: false
-            },
-
-            plugins: {
-
-                legend: {
-
-                    labels: {
-
-                        font: {
-                            size: 13
-                        }
-                    }
-                }
-            },
-
-            scales: {
-
-                y: {
-                    beginAtZero: false
-                }
+            plugins: { legend: { display: false } },
+            scales: { 
+                y: { grid: { color: '#f0f0f0' }, beginAtZero: false },
+                x: { grid: { display: false } }
             }
         }
     });
+}
 
-    listaCharts.push(chart);
+function updateScatter(id, pts, xLabel, containerId) {
+    if(charts[id]) charts[id].destroy();
+    const r = getPearson(pts);
+    charts[id] = new Chart(document.getElementById(id), {
+        data: {
+            datasets: [
+                { type: 'scatter', data: pts, backgroundColor: '#8B0000', pointRadius: 5 },
+                { type: 'line', data: getRegLine(pts), borderColor: '#333', borderDash: [5,5], fill: false, pointRadius: 0 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { title: { display: true, text: xLabel } }, y: { title: { display: true, text: 'R$' } } }
+        }
+    });
+    const box = document.getElementById(containerId);
+    let ins = box.querySelector('.insight-text') || document.createElement('div');
+    ins.className='insight-text'; box.appendChild(ins);
+    ins.innerHTML = `<strong>R-SQUARE:</strong> ${Math.abs(r).toFixed(2)}. ${Math.abs(r) > 0.5 ? 'Forte influência climática.' : 'Baixa influência direta.'}`;
+}
+
+function renderAnuais() {
+    const grid = document.getElementById('grid-anos'); grid.innerHTML = "";
+    let anos = {};
+    rawPrecos.forEach(p => {
+        let a = new Date(p.data).getFullYear();
+        if(!anos[a]) anos[a] = [];
+        anos[a].push(p);
+    });
+
+    Object.keys(anos).sort().reverse().forEach(ano => {
+        const div = document.createElement('div'); div.className = 'chart-container mini-chart';
+        div.innerHTML = `<h3>ANO ${ano}</h3><canvas id="ano-${ano}"></canvas>`;
+        grid.appendChild(div);
+        
+        let meses = Array(12).fill(0).map((_,i) => {
+            let m = anos[ano].filter(p => new Date(p.data).getMonth() === i);
+            return m.length ? (m.reduce((a,b)=>a+parseFloat(b.comum),0)/m.length).toFixed(2) : 0;
+        });
+
+        new Chart(document.getElementById(`ano-${ano}`), {
+            type: 'bar',
+            data: { labels: ["J","F","M","A","M","J","J","A","S","O","N","D"], datasets: [{ data: meses, backgroundColor: '#8B0000' }] },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { display: true }, x: { grid: { display: false } } }
+            }
+        });
+    });
 }
 </script>
 </body>
