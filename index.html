@@ -1,369 +1,181 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CEAGESP | Dashboard</title>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>CEAGESP</title>
+    
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=JetBrains+Mono:wght@500;800&display=swap" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1" rel="stylesheet"/>
+
+    <script id="tailwind-config">
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#610000",
+                        "primary-container": "#8b0000",
+                        "surface": "#f7f9fb",
+                        "outline": "#8e706b",
+                        "background": "#f7f9fb",
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.5rem", "xl": "1rem" }
+                }
+            }
+        }
+    </script>
+
     <style>
-        :root {
-            --primary: #8B0000;
-            --accent: #b71c1c;
-            --bg: #f8f9fa;
-            --card-bg: #ffffff;
-            --text-main: #1a1a1a;
-            --text-muted: #666;
-        }
-
-        *{margin:0;padding:0;box-sizing:border-box;}
-        body{font-family:'Inter', sans-serif;background:var(--bg);color:var(--text-main);-webkit-font-smoothing:antialiased;}
-        
-        header{
-            background:linear-gradient(135deg, var(--primary), var(--accent));
-            color:white;padding:15px 40px;display:flex;justify-content:space-between;
-            align-items:center;box-shadow:0 4px 12px rgba(0,0,0,0.1);
-        }
-        header h2{font-weight:800;letter-spacing:-0.5px;text-transform:uppercase;font-size:1.3rem;}
-        #status{font-family:'JetBrains Mono', monospace;font-size:0.7rem;background:rgba(0,0,0,0.2);padding:4px 12px;border-radius:20px;}
-
-        .container{max-width:1600px;margin:auto;padding:25px;}
-
-        /* Filtros */
-        .box-filtros{
-            background:white;padding:25px;border-radius:16px;margin-bottom:25px;
-            display:grid;grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap:20px;box-shadow:0 2px 15px rgba(0,0,0,0.03);border:1px solid #eee;
-        }
-        label{display:block;font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;letter-spacing:0.5px;}
-        input{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-family:'Inter', sans-serif;font-size:0.9rem;}
-        
-        .btn-main{
-            background:var(--primary);color:white;border:none;padding:12px;
-            border-radius:10px;font-weight:800;cursor:pointer;transition:0.3s;
-            text-transform:uppercase;font-size:0.8rem;
-        }
-        .btn-main:hover{background:#600000;transform:translateY(-2px);box-shadow:0 4px 12px rgba(139,0,0,0.2);}
-
-        /* Controles de Tempo */
-        .time-controls{display:flex;gap:8px;margin-bottom:20px;}
-        .btn-time{
-            padding:8px 18px;border:1px solid #ddd;background:white;
-            color:var(--text-muted);border-radius:25px;cursor:pointer;
-            font-size:11px;font-weight:700;transition:0.2s;
-        }
-        .btn-time.active{background:var(--primary);color:white;border-color:var(--primary);}
-
-        /* Stats Bloomberg Style */
-        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px, 1fr));gap:20px;margin-bottom:25px;}
-        .stat-card{
-            background:white;padding:20px;border-radius:16px;text-align:left;
-            border-bottom:4px solid var(--primary);box-shadow:0 2px 10px rgba(0,0,0,0.02);
-        }
-        .stat-card h4{font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;font-weight:800;}
-        .stat-card p{font-size:24px;font-weight:800;font-family:'JetBrains Mono', monospace;color:var(--primary);}
-
-        /* Gráficos Estáveis */
-        .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(600px, 1fr));gap:25px;}
-        .chart-container{
-            background:white;padding:25px;border-radius:20px;
-            box-shadow:0 2px 15px rgba(0,0,0,0.02);border:1px solid #f0f0f0;
-            height:450px; /* Altura fixa para evitar esticamento */
-            position: relative;
-        }
-        .chart-container h3{font-size:14px;margin-bottom:20px;border-left:4px solid var(--primary);padding-left:12px;font-weight:800;text-transform:uppercase;}
-        
-        .insight-text{margin-top:15px;padding:12px;background:#fff8f8;border-radius:10px;font-size:12px;color:#444;line-height:1.4;border:1px solid #ffeaea;}
-        
-        #grid-anos{margin-top:40px;display:grid;grid-template-columns:repeat(auto-fit, minmax(350px, 1fr));gap:25px;}
-        .mini-chart{height:300px !important;} /* Altura para os gráficos anuais */
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .chart-container { position: relative; height: 320px; width: 100%; }
+        .active-time { background: white !important; color: #8b0000 !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     </style>
 </head>
-<body>
 
-<header>
-    <h2>CEAGESP </h2>
-    <div id="status">SISTEMA ONLINE</div>
+<body class="bg-background text-slate-900 font-[Inter] min-h-screen md:pl-80">
+
+<aside class="fixed left-0 top-0 bottom-0 z-40 h-full w-80 hidden md:flex flex-col bg-white border-r border-slate-200">
+    <div class="p-6 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center text-white">
+            <span class="material-symbols-outlined">analytics</span>
+        </div>
+        <div>
+            <h2 class="font-bold text-primary text-lg">Analista de Mercado</h2>
+            <p class="text-xs text-slate-500">CEAGESP Terminal</p>
+        </div>
+    </div>
+    <nav class="flex-1 px-4 space-y-1">
+        <div class="bg-primary-container text-white rounded-lg flex items-center px-4 py-3 cursor-pointer">
+            <span class="material-symbols-outlined mr-3 text-sm">dashboard</span> Dashboard
+        </div>
+        <div class="text-slate-600 hover:bg-slate-50 rounded-lg flex items-center px-4 py-3 cursor-pointer transition-all">
+            <span class="material-symbols-outlined mr-3 text-sm">cloud</span> Clima & Preço
+        </div>
+    </nav>
+    <div class="p-6 border-t border-slate-100">
+        <div class="flex items-center gap-2">
+            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            <p class="text-xs font-mono text-slate-500" id="status-label">SISTEMA ONLINE</p>
+        </div>
+    </div>
+</aside>
+
+<header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 h-16 flex items-center justify-between">
+    <h1 class="text-lg font-bold text-slate-800 md:hidden">CEAGESP</h1>
+    <div class="flex items-center gap-4 ml-auto">
+        <span class="material-symbols-outlined text-slate-400 cursor-pointer">notifications</span>
+        <div class="w-8 h-8 rounded-full bg-slate-200"></div>
+    </div>
 </header>
 
-<div class="container">
-    <div class="box-filtros">
-        <div><label>Produto</label><input list="listProd" id="prodInp" onchange="loadVariedades()" placeholder="Busca..."><datalist id="listProd"></datalist></div>
-        <div><label>Variedade</label><input list="listVar" id="varInp" placeholder="Todas"><datalist id="listVar"></datalist></div>
-        <div><label>Início</label><input type="date" id="dateIni"></div>
-        <div><label>Fim</label><input type="date" id="dateFim"></div>
-        <button class="btn-main" onclick="processar()">Executar</button>
-    </div>
-
-    <div class="time-controls" id="timeControls" style="display:none;">
-        <button class="btn-time active" onclick="changeGranularity('diario', this)">DIÁRIO</button>
-        <button class="btn-time" onclick="changeGranularity('semanal', this)">SEMANAL</button>
-        <button class="btn-time" onclick="changeGranularity('mensal', this)">MENSAL</button>
-    </div>
-
-    <div class="stats-grid" id="statsRow" style="display:none;">
-        <div class="stat-card"><h4>Média Período</h4><p id="st-media">--</p></div>
-        <div class="stat-card"><h4>Mínimo</h4><p id="st-min">--</p></div>
-        <div class="stat-card"><h4>Máximo</h4><p id="st-max">--</p></div>
-        <div class="stat-card"><h4>Correlação R</h4><p id="st-pearson">--</p></div>
-    </div>
-
-    <div class="charts-grid">
-        <div class="chart-container">
-            <h3>Sazonalidade Histórica</h3>
-            <canvas id="chSazonal"></canvas>
-        </div>
-        <div class="chart-container">
-            <h3>Tendência de Preços</h3>
-            <canvas id="chEvolucao"></canvas>
-        </div>
-        <div class="chart-container" id="boxTemp">
-            <h3>Correlação: Temperatura x Preço</h3>
-            <canvas id="chTemp"></canvas>
-        </div>
-        <div class="chart-container" id="boxChuva">
-            <h3>Correlação: Chuva x Preço</h3>
-            <canvas id="chChuva"></canvas>
-        </div>
-    </div>
-
-    <h2 style="margin-top:50px; color:var(--primary); font-size:1.2rem; text-transform:uppercase; font-weight:800;">Histórico por Ciclo Anual</h2>
-    <div id="grid-anos"></div>
-</div>
-
-<script>
-// Configurações Globais de Gráficos (Anti-borrão)
-Chart.defaults.devicePixelRatio = window.devicePixelRatio || 1;
-Chart.defaults.font.family = "'Inter', sans-serif";
-Chart.defaults.font.size = 11;
-Chart.defaults.color = '#777';
-
-const SUPABASE_URL = 'https://nmkxkebbuouxhtqtdtys.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ta3hrZWJidW91eGh0cXRkdHlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMTcwNDgsImV4cCI6MjA5NDg5MzA0OH0.uWzPvdd7k1CDhLFt8oA7mm-FIePSFD6VhPYJcAkRjps';
-const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-let rawPrecos = [], rawClima = [], charts = {}, currentGranularity = 'diario';
-
-window.onload = async () => {
-    const { data } = await _sb.from('ceagesp').select('produto');
-    const prods = [...new Set(data.map(i => i.produto))].sort();
-    const list = document.getElementById('listProd');
-    prods.forEach(p => { let o = document.createElement('option'); o.value = p; list.appendChild(o); });
-};
-
-async function loadVariedades() {
-    const p = document.getElementById('prodInp').value;
-    const { data } = await _sb.from('ceagesp').select('variedade').eq('produto', p);
-    const vars = [...new Set(data.map(i => i.variedade))].sort();
-    const list = document.getElementById('listVar'); list.innerHTML = "";
-    vars.forEach(v => { let o = document.createElement('option'); o.value = v; list.appendChild(o); });
-}
-
-function toYMD(d) {
-    if(!d) return null;
-    let date = new Date(d);
-    return isNaN(date) ? null : date.toISOString().split('T')[0];
-}
-
-function getPearson(pts) {
-    const n = pts.length; if(n<2) return 0;
-    let x=pts.map(p=>p.x), y=pts.map(p=>p.y);
-    let sx=x.reduce((a,b)=>a+b), sy=y.reduce((a,b)=>a+b);
-    let sxy=x.reduce((a,b,i)=>a+b*y[i],0), sx2=x.reduce((a,b)=>a+b*b,0), sy2=y.reduce((a,b)=>a+b*b,0);
-    let num = n*sxy - sx*sy;
-    let den = Math.sqrt((n*sx2 - sx*sx)*(n*sy2 - sy*sy));
-    return den === 0 ? 0 : num/den;
-}
-
-function getRegLine(pts) {
-    if(pts.length < 2) return [];
-    let x=pts.map(p=>p.x), y=pts.map(p=>p.y), n=pts.length;
-    let sx=x.reduce((a,b)=>a+b), sy=y.reduce((a,b)=>a+b);
-    let sxy=x.reduce((a,b,i)=>a+b*y[i],0), sx2=x.reduce((a,b)=>a+b*b,0);
-    let m = (n*sxy - sx*sy)/(n*sx2 - sx*sx);
-    let b = (sy - m*sx)/n;
-    let minX = Math.min(...x), maxX = Math.max(...x);
-    return [{x: minX, y: m*minX+b}, {x: maxX, y: m*maxX+b}];
-}
-
-async function processar() {
-    const prod = document.getElementById('prodInp').value;
-    if(!prod) return alert("Selecione o produto");
+<main class="p-6 max-w-7xl mx-auto space-y-6">
     
-    document.getElementById('status').innerText = "CALCULANDO...";
-    let query = _sb.from('ceagesp').select('*').eq('produto', prod);
-    if(document.getElementById('varInp').value) query = query.eq('variedade', document.getElementById('varInp').value);
-    const { data: pData } = await query;
-    rawPrecos = pData;
-
-    let cAll = [];
-    for(let i=0; i<3; i++) {
-        const { data } = await _sb.from('clima_diario').select('*').range(i*1000, (i+1)*1000 - 1);
-        if(data) cAll = [...cAll, ...data];
-    }
-    rawClima = cAll;
-
-    document.getElementById('timeControls').style.display = 'flex';
-    document.getElementById('statsRow').style.display = 'grid';
-    renderDashboard();
-    document.getElementById('status').innerText = "ONLINE";
-}
-
-function changeGranularity(g, btn) {
-    currentGranularity = g;
-    document.querySelectorAll('.btn-time').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    renderDashboard();
-}
-
-function renderDashboard() {
-    const ini = document.getElementById('dateIni').value;
-    const fim = document.getElementById('dateFim').value;
-
-    let filtrados = rawPrecos.map(p => ({ date: toYMD(p.data), val: parseFloat(p.comum) }))
-      .filter(p => p.date && (!ini || p.date >= ini) && (!fim || p.date <= fim))
-      .sort((a,b) => a.date.localeCompare(b.date));
-
-    let graficoEvolucao = [];
-    if(currentGranularity === 'diario') graficoEvolucao = filtrados;
-    else {
-        let grupos = {};
-        filtrados.forEach(f => {
-            let chave = f.date.substring(0, 7);
-            if(currentGranularity === 'semanal') {
-                let d = new Date(f.date);
-                chave = `${d.getFullYear()}-W${Math.ceil(d.getDate()/7)}`;
-            }
-            if(!grupos[chave]) grupos[chave] = [];
-            grupos[chave].push(f.val);
-        });
-        graficoEvolucao = Object.keys(grupos).map(k => ({ date: k, val: grupos[k].reduce((a,b)=>a+b)/grupos[k].length }));
-    }
-
-    const mapaClima = {};
-    rawClima.forEach(c => {
-        let d = toYMD(c.data);
-        if(d) mapaClima[d] = { t: parseFloat(c.temperatura_media || c.temp || 0), c: parseFloat(c.chuva_mm || c.chuva || 0) };
-    });
-
-    let ptsTemp = [], ptsChuva = [];
-    filtrados.forEach(p => {
-        if(mapaClima[p.date]) {
-            if(mapaClima[p.date].t !== 0) ptsTemp.push({ x: mapaClima[p.date].t, y: p.val });
-            if(mapaClima[p.date].c !== 0) ptsChuva.push({ x: mapaClima[p.date].c, y: p.val });
-        }
-    });
-
-    if(filtrados.length) {
-        const vals = filtrados.map(f => f.val);
-        document.getElementById('st-media').innerText = `R$ ${(vals.reduce((a,b)=>a+b)/vals.length).toFixed(2)}`;
-        document.getElementById('st-min').innerText = `R$ ${Math.min(...vals).toFixed(2)}`;
-        document.getElementById('st-max').innerText = `R$ ${Math.max(...vals).toFixed(2)}`;
-        document.getElementById('st-pearson').innerText = getPearson(ptsTemp).toFixed(2);
-    }
-
-    // Gráfico 1: Sazonalidade com Degradê Moderno
-    updateChart('chSazonal', 'bar', ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"], 
-        Array(12).fill(0).map((_,i) => {
-            let m = rawPrecos.filter(p => new Date(p.data).getMonth() === i);
-            return m.length ? (m.reduce((a,b)=>a+parseFloat(b.comum),0)/m.length).toFixed(2) : 0;
-        }), 'Preço Médio R$');
-
-    updateChart('chEvolucao', 'line', graficoEvolucao.map(g=>g.date), graficoEvolucao.map(g=>g.val), 'Evolução R$');
-    updateScatter('chTemp', ptsTemp, 'Temp ºC', 'boxTemp');
-    updateScatter('chChuva', ptsChuva, 'Chuva mm', 'boxChuva');
-    renderAnuais();
-}
-
-function updateChart(id, type, labels, data, label) {
-    if(charts[id]) charts[id].destroy();
-    const ctx = document.getElementById(id).getContext('2d');
-    
-    // Gradiente para tornar a cor do primeiro gráfico mais profissional
-    let fillStyle = 'rgba(139, 0, 0, 0.1)';
-    if(type === 'bar' || id === 'chEvolucao'){
-        let gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, 'rgba(139, 0, 0, 0.8)');
-        gradient.addColorStop(1, 'rgba(139, 0, 0, 0.05)');
-        fillStyle = gradient;
-    }
-
-    charts[id] = new Chart(ctx, {
-        type: type,
-        data: { labels, datasets: [{ 
-            label, data, 
-            borderColor: '#8B0000', 
-            backgroundColor: fillStyle, 
-            fill: true,
-            borderWidth: 2,
-            tension: 0.3,
-            pointRadius: type === 'line' ? 2 : 0
-        }]},
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { 
-                y: { grid: { color: '#f0f0f0' }, beginAtZero: false },
-                x: { grid: { display: false } }
-            }
-        }
-    });
-}
-
-function updateScatter(id, pts, xLabel, containerId) {
-    if(charts[id]) charts[id].destroy();
-    const r = getPearson(pts);
-    charts[id] = new Chart(document.getElementById(id), {
-        data: {
-            datasets: [
-                { type: 'scatter', data: pts, backgroundColor: '#8B0000', pointRadius: 5 },
-                { type: 'line', data: getRegLine(pts), borderColor: '#333', borderDash: [5,5], fill: false, pointRadius: 0 }
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { x: { title: { display: true, text: xLabel } }, y: { title: { display: true, text: 'R$' } } }
-        }
-    });
-    const box = document.getElementById(containerId);
-    let ins = box.querySelector('.insight-text') || document.createElement('div');
-    ins.className='insight-text'; box.appendChild(ins);
-    ins.innerHTML = `<strong>R-SQUARE:</strong> ${Math.abs(r).toFixed(2)}. ${Math.abs(r) > 0.5 ? 'Forte influência climática.' : 'Baixa influência direta.'}`;
-}
-
-function renderAnuais() {
-    const grid = document.getElementById('grid-anos'); grid.innerHTML = "";
-    let anos = {};
-    rawPrecos.forEach(p => {
-        let a = new Date(p.data).getFullYear();
-        if(!anos[a]) anos[a] = [];
-        anos[a].push(p);
-    });
-
-    Object.keys(anos).sort().reverse().forEach(ano => {
-        const div = document.createElement('div'); div.className = 'chart-container mini-chart';
-        div.innerHTML = `<h3>ANO ${ano}</h3><canvas id="ano-${ano}"></canvas>`;
-        grid.appendChild(div);
+    <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Produto</label>
+                <input list="listProd" id="prodInp" onchange="loadVariedades()" class="w-full rounded-lg border-slate-200 text-sm focus:ring-primary" placeholder="Buscar produto...">
+                <datalist id="listProd"></datalist>
+            </div>
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Variedade</label>
+                <input list="listVar" id="varInp" class="w-full rounded-lg border-slate-200 text-sm focus:ring-primary" placeholder="Todas as variedades">
+                <datalist id="listVar"></datalist>
+            </div>
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Início</label>
+                <input type="date" id="dateIni" class="w-full rounded-lg border-slate-200 text-sm focus:ring-primary">
+            </div>
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fim</label>
+                <input type="date" id="dateFim" class="w-full rounded-lg border-slate-200 text-sm focus:ring-primary">
+            </div>
+        </div>
         
-        let meses = Array(12).fill(0).map((_,i) => {
-            let m = anos[ano].filter(p => new Date(p.data).getMonth() === i);
-            return m.length ? (m.reduce((a,b)=>a+parseFloat(b.comum),0)/m.length).toFixed(2) : 0;
-        });
+        <div class="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="inline-flex bg-slate-100 p-1 rounded-xl" id="timeControls">
+                <button onclick="changeGranularity('diario', this)" class="px-4 py-2 text-xs font-bold rounded-lg transition-all active-time">DIÁRIO</button>
+                <button onclick="changeGranularity('semanal', this)" class="px-4 py-2 text-xs font-bold rounded-lg transition-all text-slate-500">SEMANAL</button>
+                <button onclick="changeGranularity('mensal', this)" class="px-4 py-2 text-xs font-bold rounded-lg transition-all text-slate-500">MENSAL</button>
+            </div>
+            <button onclick="processar()" class="w-full sm:w-auto px-8 py-3 bg-primary-container text-white font-bold rounded-xl hover:bg-primary transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-900/20">
+                <span class="material-symbols-outlined text-sm">analytics</span> EXECUTAR ANÁLISE
+            </button>
+        </div>
+    </section>
 
-        new Chart(document.getElementById(`ano-${ano}`), {
-            type: 'bar',
-            data: { labels: ["J","F","M","A","M","J","J","A","S","O","N","D"], datasets: [{ data: meses, backgroundColor: '#8B0000' }] },
-            options: { 
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { display: true }, x: { grid: { display: false } } }
-            }
-        });
-    });
-}
-</script>
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200">
+            <p class="text-[10px] font-bold text-slate-400 uppercase">Média Período</p>
+            <h3 class="text-2xl font-mono font-bold text-primary" id="st-media">R$ 0,00</h3>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200">
+            <p class="text-[10px] font-bold text-slate-400 uppercase">Mínimo</p>
+            <h3 class="text-2xl font-mono font-bold text-slate-700" id="st-min">R$ 0,00</h3>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200">
+            <p class="text-[10px] font-bold text-slate-400 uppercase">Máximo</p>
+            <h3 class="text-2xl font-mono font-bold text-red-600" id="st-max">R$ 0,00</h3>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200">
+            <p class="text-[10px] font-bold text-slate-400 uppercase">Correlação (R)</p>
+            <h3 class="text-2xl font-mono font-bold text-slate-800" id="st-pearson">0.00</h3>
+        </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h3 class="text-sm font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">calendar_today</span> Sazonalidade Histórica
+            </h3>
+            <div class="chart-container"><canvas id="chSazonal"></canvas></div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h3 class="text-sm font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">trending_up</span> Tendência de Preços
+            </h3>
+            <div class="chart-container"><canvas id="chEvolucao"></canvas></div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm lg:col-span-1">
+            <h3 class="text-sm font-bold text-slate-800 mb-6">Correlação: Temperatura x Preço</h3>
+            <div class="chart-container"><canvas id="chTemp"></canvas></div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm lg:col-span-1">
+            <h3 class="text-sm font-bold text-slate-800 mb-6">Correlação: Chuva x Preço</h3>
+            <div class="chart-container"><canvas id="chChuva"></canvas></div>
+        </div>
+    </section>
+
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+            <h2 class="font-bold text-slate-800">Histórico Anual Consolidado</h2>
+            <span class="text-[10px] bg-slate-100 px-2 py-1 rounded font-bold text-slate-500 uppercase">Média Mensal</span>
+        </div>
+        <div class="overflow-x-auto font-mono text-xs">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-100 text-slate-400">
+                        <th class="p-4">Ano</th>
+                        <th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th><th>Jun</th>
+                        <th>Jul</th><th>Ago</th><th>Set</th><th>Out</th><th>Nov</th><th>Dez</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody" class="divide-y divide-slate-50">
+                    </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/utils.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/components.js"></script>
+<script src="assets/js/main.js"></script>
 </body>
 </html>
