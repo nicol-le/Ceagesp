@@ -1,7 +1,7 @@
 
 const Components = {
 
-    atualizarSemaforo(precosFiltrados) {
+    atualizarSemaforo(precosFiltrados, statsClima) {
         if (!precosFiltrados.length) return;
 
         const hoje = new Date();
@@ -58,30 +58,87 @@ const Components = {
         }
     },
 
-
-    gerarInsightIA(dados, pearson) {
+    // IA INTELIGENTE MELHORADA COM ANÁLISE MULTIVARIADA
+    gerarInsightIA(dados, pearsonTemp, pearsonChuva, ptsTemp, ptsChuva, correlacoes) {
         const insightEl = document.getElementById('ia-insight');
         if (!dados.length || !insightEl) return;
 
+        let html = '';
+
+        // Análise de tendência
         const recentes = dados.slice(-7);
         const anteriores = dados.slice(-14, -7);
         const mediaRecente = Utils.average(recentes.map(d => d.val));
         const mediaAnterior = Utils.average(anteriores.map(d => d.val));
-        
-        let texto = `Analisando o comportamento do produto, `;
+        const tendencia = Utils.percentualMudanca(mediaAnterior, mediaRecente);
 
-        if (mediaRecente > mediaAnterior * 1.05) texto += "notamos uma **subida rápida** nos preços recentemente. ";
-        else if (mediaRecente < mediaAnterior * 0.95) texto += "o mercado apresenta uma **queda acentuada** na última semana. ";
-        else texto += "o preço tem se mantido **estável**. ";
-
-
-        if (Math.abs(pearson) > 0.6) {
-            texto += "O clima parece ser um fator decisivo aqui: mudanças na temperatura impactam diretamente o que você recebe. ";
+        // 1. TENDÊNCIA DE PREÇO
+        html += '<div class="mb-3"><span class="font-bold text-slate-800">Tendência de Preço:</span> ';
+        if (tendencia > 5) {
+            html += `<span class="text-green-600">Os preços <strong>subiram ${Math.abs(tendencia).toFixed(1)}%</strong> na última semana</span>`;
+        } else if (tendencia < -5) {
+            html += `<span class="text-red-600">Os preços <strong>caíram ${Math.abs(tendencia).toFixed(1)}%</strong> na última semana</span>`;
+        } else {
+            html += `<span class="text-amber-600">Os preços têm se mantido <strong>estáveis</strong> (variação de ${Math.abs(tendencia).toFixed(1)}%)</span>`;
         }
+        html += '</div>';
 
-       
-        texto += " **Dica para o produtor:** Fique atento ao volume de entrada no CEAGESP nas primeiras horas da manhã para negociar melhor.";
+        // 2. FATORES CLIMÁTICOS PRINCIPAIS
+        html += '<div class="mb-3"><span class="font-bold text-slate-800">Fatores Climáticos Dominantes:</span> ';
+        
+        if (!correlacoes || correlacoes.length === 0) {
+            html += '<span class="text-slate-500">Dados insuficientes para análise climática</span>';
+        } else {
+            // Encontrar os fatores com maior impacto
+            const topFactores = correlacoes.slice(0, 3);
+            const factoresFortes = topFactores.filter(f => Math.abs(f.r) > 0.5);
+            
+            if (factoresFortes.length > 0) {
+                html += '<div class="text-sm text-slate-700 space-y-1">';
+                factoresFortes.forEach(f => {
+                    const direcao = f.r > 0 ? 'aumentam' : 'diminuem';
+                    const strength = Math.abs(f.r) > 0.7 ? 'forte' : 'moderada';
+                    html += `<div class="text-green-600"><strong>${f.nome}:</strong> correlação ${strength} (r=${f.r.toFixed(2)}) - preços ${direcao}</div>`;
+                });
+                html += '</div>';
+            } else {
+                html += '<span class="text-slate-500">Nenhuma correlação forte detectada</span>';
+            }
+        }
+        html += '</div>';
 
-        insightEl.innerHTML = texto;
+        // 3. RECOMENDAÇÃO PRÁTICA
+        html += '<div class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">';
+        html += '<span class="font-bold text-blue-900">Recomendação: </span>';
+        
+        let recomendacao = 'Fique atento ao volume de entrada no CEAGESP nas primeiras horas.';
+        
+        // Recomendação baseada em correlações fortes
+        if (correlacoes && correlacoes.length > 0) {
+            const factoresFortes = correlacoes.filter(f => Math.abs(f.r) > 0.5);
+            if (factoresFortes.length > 0) {
+                recomendacao = 'Os fatores climáticos têm impacto significativo! Monitore as previsões meteorológicas antes de negociar, especialmente: ' + 
+                    factoresFortes.map(f => f.nome.toLowerCase()).join(', ') + '.';
+            }
+        }
+        
+        if (tendencia > 5) {
+            recomendacao += ' A tendência atual é de alta - bom momento para vender se você tem estoque.';
+        } else if (tendencia < -5) {
+            recomendacao += ' Com preços em queda, considere esperar estabilização ou expandir compras.';
+        }
+        
+        html += `<strong>${recomendacao}</strong></div>`;
+
+        // 4. QUALIDADE DOS DADOS
+        html += '<div class="mt-3 text-xs text-slate-500 border-t border-slate-200 pt-2">';
+        const totalPontos = (ptsTemp ? ptsTemp.length : 0) + (ptsChuva ? ptsChuva.length : 0);
+        html += `Dados: ${totalPontos} pontos climáticos únicos analisados`;
+        if (correlacoes) {
+            html += ` | ${correlacoes.length} variáveis climáticas correlacionadas`;
+        }
+        html += '</div>';
+
+        insightEl.innerHTML = html;
     }
 };

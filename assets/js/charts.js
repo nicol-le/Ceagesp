@@ -70,35 +70,88 @@ const Charts = {
         if (appState.charts[id]) appState.charts[id].destroy();
 
         const ctx = document.getElementById(id).getContext('2d');
+        
+        // Se não há pontos, mostrar mensagem
+        if (!pts || pts.length < 2) {
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '14px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Dados insuficientes para correlação', ctx.canvas.width / 2, ctx.canvas.height / 2);
+            return;
+        }
+
+        const regLine = Utils.getRegLine(pts);
+
         appState.charts[id] = new Chart(ctx, {
+            type: 'scatter',
             data: {
                 datasets: [
                     {
                         type: 'scatter',
                         data: pts,
                         backgroundColor: this.colors.primary,
-                        pointRadius: 4
+                        borderColor: this.colors.primary,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointBorderWidth: 1
                     },
                     {
                         type: 'line',
-                        data: Utils.getRegLine(pts),
-                        borderColor: '#333',
+                        data: regLine,
+                        borderColor: '#64748b',
                         borderDash: [5, 5],
+                        borderWidth: 2,
                         fill: false,
-                        pointRadius: 0
+                        pointRadius: 0,
+                        tension: 0
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        padding: 12,
+                        titleFont: { size: 13, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        callbacks: {
+                            title: (context) => {
+                                const idx = context[0].datasetIndex;
+                                return idx === 0 ? `${xLabel}: ${context[0].parsed.x.toFixed(1)}` : '';
+                            },
+                            label: (context) => {
+                                if (context.datasetIndex === 0) {
+                                    return `Preço: R$ ${context.parsed.y.toFixed(2)}`;
+                                }
+                                return '';
+                            }
+                        }
+                    }
+                },
                 scales: {
                     x: { 
-                        title: { display: true, text: xLabel, color: this.colors.text },
-                        ticks: { color: this.colors.text }
+                        title: { 
+                            display: true, 
+                            text: xLabel, 
+                            color: this.colors.text,
+                            font: { weight: 'bold' }
+                        },
+                        ticks: { color: this.colors.text },
+                        grid: { color: this.colors.grid }
                     },
-                    y: { ticks: { color: this.colors.text } }
+                    y: { 
+                        ticks: { color: this.colors.text },
+                        grid: { color: this.colors.grid },
+                        title: {
+                            display: true,
+                            text: 'Preço (R$)',
+                            color: this.colors.text,
+                            font: { weight: 'bold' }
+                        }
+                    }
                 }
             }
         });

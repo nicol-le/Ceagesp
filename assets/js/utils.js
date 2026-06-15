@@ -3,8 +3,35 @@ const Utils = {
   
     toYMD(d) {
         if (!d) return null;
-        const date = new Date(d);
-        return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
+        try {
+            let date;
+            
+            // Tenta parsear como timestamp ou string
+            if (typeof d === 'string') {
+                // Se já está em YYYY-MM-DD
+                if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+                    return d;
+                }
+                // Tenta parseFloat se for timestamp
+                if (/^\d+$/.test(d.trim())) {
+                    date = new Date(parseInt(d));
+                } else {
+                    date = new Date(d);
+                }
+            } else {
+                date = new Date(d);
+            }
+            
+            if (isNaN(date.getTime())) return null;
+            
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}`;
+        } catch (e) {
+            return null;
+        }
     },
 
   
@@ -35,6 +62,22 @@ const Utils = {
         return den === 0 ? 0 : num / den;
     },
 
+    // Interpretação da correlação Pearson
+    interpretarPearson(r) {
+        const abs_r = Math.abs(r);
+        if (abs_r < 0.3) return "Nenhuma correlação aparente";
+        if (abs_r < 0.5) return "Correlação fraca";
+        if (abs_r < 0.7) return "Correlação moderada";
+        if (abs_r < 0.9) return "Correlação forte";
+        return "Correlação muito forte";
+    },
+
+    // Descrição da direção da correlação
+    descricaoPearson(r) {
+        if (r > 0.3) return "positiva (quando X aumenta, Y aumenta)";
+        if (r < -0.3) return "negativa (quando X aumenta, Y diminui)";
+        return "nenhuma relação linear clara";
+    },
    
     getRegLine(pts) {
         if (pts.length < 2) return [];
@@ -64,5 +107,55 @@ const Utils = {
     average(arr) {
         if (!arr.length) return 0;
         return arr.reduce((a, b) => a + b, 0) / arr.length;
+    },
+
+    // Desvio padrão
+    stdDev(arr) {
+        if (arr.length < 2) return 0;
+        const avg = this.average(arr);
+        const squaredDiffs = arr.map(x => Math.pow(x - avg, 2));
+        return Math.sqrt(this.average(squaredDiffs));
+    },
+
+    // Desvio padrão
+    stdDev(arr) {
+        if (arr.length < 2) return 0;
+        const avg = this.average(arr);
+        const squaredDiffs = arr.map(x => Math.pow(x - avg, 2));
+        return Math.sqrt(this.average(squaredDiffs));
+    },
+
+    // Coeficiente de variação (%)
+    coefficientOfVariation(arr) {
+        if (arr.length < 2) return 0;
+        const avg = this.average(arr);
+        if (avg === 0) return 0;
+        const std = this.stdDev(arr);
+        return (std / avg) * 100;
+    },
+
+    // Percentual de mudança
+    percentualMudanca(valor1, valor2) {
+        if (valor1 === 0) return 0;
+        return ((valor2 - valor1) / valor1) * 100;
+    },
+
+    // Encontrar valor mínimo com data
+    findMin(arr) {
+        if (!arr.length) return { val: 0, date: null };
+        return arr.reduce((min, curr) => curr.val < min.val ? curr : min);
+    },
+
+    // Encontrar valor máximo com data
+    findMax(arr) {
+        if (!arr.length) return { val: 0, date: null };
+        return arr.reduce((max, curr) => curr.val > max.val ? curr : max);
+    },
+
+    // Formatar data para exibição
+    formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const date = new Date(dateStr + 'T00:00:00');
+        return date.toLocaleDateString('pt-BR');
     }
 };
