@@ -23,13 +23,23 @@ async function loadVariedades() {
     const prod = document.getElementById('prodInp').value;
     const variedades = await Api.fetchVariedades(prod);
     const list = document.getElementById('listVar');
-    list.innerHTML = "";
+    const varInp = document.getElementById('varInp');
     
-    variedades.forEach(v => {
-        let o = document.createElement('option');
-        o.value = v;
-        list.appendChild(o);
-    });
+    list.innerHTML = "";
+    varInp.value = "";
+    
+    if (variedades.length === 0) {
+        varInp.disabled = true;
+        varInp.placeholder = "Sem variedades disponíveis";
+    } else {
+        varInp.disabled = false;
+        varInp.placeholder = "Todas as variedades";
+        variedades.forEach(v => {
+            let o = document.createElement('option');
+            o.value = v;
+            list.appendChild(o);
+        });
+    }
 }
 
 function changeGranularity(g, btn) {
@@ -83,8 +93,7 @@ async function processar() {
     }
 
     const ini = document.getElementById('dateIni').value;
-    const fim = document.getElementById('dateFim').value;
-    console.log("📅 Filtro de data — ini:", ini, "fim:", fim);
+    console.log("📅 Filtro de data — ini:", ini);
     console.groupEnd();
     // ===== FIM DO DEBUG =====
 
@@ -94,14 +103,15 @@ async function processar() {
 
 function renderDashboard() {
     const ini = document.getElementById('dateIni').value;
-    const fim = document.getElementById('dateFim').value;
+    // Data Realista de Análise: 05 de Abril de 2026
+    const dataReferencia = "2026-04-05";
 
     let filtrados = appState.rawPrecos.map(p => ({ 
         date: Utils.toYMD(p.data), 
         val: parseFloat(p.comum),
         unidade: p.unidade || 'KG'
     }))
-    .filter(p => p.date && !isNaN(p.val) && (!ini || p.date >= ini) && (!fim || p.date <= fim))
+    .filter(p => p.date && !isNaN(p.val) && (!ini || p.date >= ini) && p.date <= dataReferencia)
     .sort((a, b) => a.date.localeCompare(b.date));
 
     if (!filtrados.length) return alert("Nenhum dado encontrado para este período.");
@@ -273,7 +283,14 @@ function renderDashboard() {
     renderCorrelationTable(correlacoes);
 
     // Atualizar componentes
+    updateExecutiveStats(filtrados);
+    Components.renderOpportunityIndex(filtrados, sazonalData);
+    Components.renderMarketingCalendar(sazonalData);
+    Components.renderMarketForecast(filtrados);
+    Components.renderMarketEvents();
     Components.atualizarSemaforo(filtrados);
+
+    // Restaurando a Análise de Insights baseada em Correlações
     if(document.getElementById('ia-insight')) {
         Components.gerarInsightIA(filtrados, pearsonTemp, pearsonChuva, ptsTemp, ptsChuva, correlacoes);
     }
@@ -284,6 +301,31 @@ function renderDashboard() {
     populateHistoryTable();
 }
 
+function updateExecutiveStats(filtrados) {
+    if (!filtrados.length) return;
+    
+    const ultimoRegistro = filtrados[filtrados.length - 1];
+    const precoAtual = ultimoRegistro.val;
+    
+    // Comparação com 7 dias atrás para tendência
+    const precoAnterior = filtrados.length > 7 ? filtrados[filtrados.length - 8].val : precoAtual;
+    const tendencia = Utils.percentualMudanca(precoAnterior, precoAtual);
+    const unidade = ultimoRegistro.unidade;
+
+    document.getElementById('ex-preco').innerText = Utils.formatCurrency(precoAtual);
+    document.getElementById('ex-unidade').innerText = `Unidade: ${unidade}`;
+    
+    const trendEl = document.getElementById('ex-tendencia');
+    trendEl.innerText = (tendencia >= 0 ? '↑ ' : '↓ ') + Math.abs(tendencia).toFixed(1) + '%';
+    trendEl.className = `text-xl font-bold ${tendencia >= 0 ? 'text-emerald-600' : 'text-red-600'}`;
+
+    // Variação mensal (últimos 30 dias dentro do filtro)
+    const mesAnt = filtrados.length > 30 ? filtrados[filtrados.length - 31].val : filtrados[0].val;
+    const varMensal = Utils.percentualMudanca(mesAnt, precoAtual);
+    document.getElementById('ex-var-mensal').innerText = `Variação Mensal: ${varMensal.toFixed(1)}%`;
+    
+    document.getElementById('exec-price-card').classList.remove('animate-pulse');
+}
     let dadosEvolucao = [...filtrados];
     if (appState.currentGranularity !== 'diario') {
         let grupos = {};

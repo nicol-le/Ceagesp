@@ -9,6 +9,40 @@ const Charts = {
         text: '#64748b'
     },
 
+    updateForecastChart(id, precoAtual, forecast) {
+        if (appState.charts[id]) appState.charts[id].destroy();
+        const ctx = document.getElementById(id).getContext('2d');
+        
+        appState.charts[id] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Hoje', '30 dias', '60 dias', '90 dias'],
+                datasets: [{
+                    data: [precoAtual, ...forecast.map(f => f.val)],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderDash: [5, 5],
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { 
+                        beginAtZero: false,
+                        ticks: { font: { size: 10 }, color: this.colors.text }
+                    },
+                    x: { 
+                        ticks: { font: { size: 10 }, color: this.colors.text }
+                    }
+                }
+            }
+        });
+    },
+
     updateLineChart(id, labels, data, label) {
         if (appState.charts[id]) appState.charts[id].destroy();
 
