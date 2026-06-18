@@ -43,7 +43,7 @@ const Charts = {
         });
     },
 
-    updateLineChart(id, labels, data, label) {
+    updateLineChart(id, labels, data, label, customColor = null, customBgColor = null) {
         if (appState.charts[id]) appState.charts[id].destroy();
 
         const ctx = document.getElementById(id).getContext('2d');
@@ -54,8 +54,8 @@ const Charts = {
                 datasets: [{
                     label,
                     data,
-                    borderColor: this.colors.primary,
-                    backgroundColor: this.colors.primaryLight,
+                    borderColor: customColor || this.colors.primary,
+                    backgroundColor: customBgColor || this.colors.primaryLight,
                     fill: true,
                     tension: 0.3,
                     pointRadius: 2
@@ -74,7 +74,7 @@ const Charts = {
     },
 
 
-    updateBarChart(id, labels, data) {
+    updateBarChart(id, labels, data, customColor = null) {
         if (appState.charts[id]) appState.charts[id].destroy();
 
         const ctx = document.getElementById(id).getContext('2d');
@@ -84,7 +84,7 @@ const Charts = {
                 labels,
                 datasets: [{
                     data,
-                    backgroundColor: this.colors.primary,
+                    backgroundColor: customColor || this.colors.primary,
                     borderRadius: 4
                 }]
             },

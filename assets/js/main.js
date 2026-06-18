@@ -274,6 +274,41 @@ function renderDashboard() {
     // Atualizar gráficos scatter principais
     Charts.updateScatter('chTemp', ptsTemp, 'Temp ºC');
     Charts.updateScatter('chChuva', ptsChuva, 'Chuva mm');
+
+    // ===== EVOLUÇÃO CLIMÁTICA NO PERÍODO =====
+    let dadosClimaEvolucao = filtrados.map(f => {
+        const c = mapaClima[f.date] || { temp: 0, chuva: 0 };
+        return {
+            date: f.date,
+            temp: c.temp,
+            chuva: c.chuva
+        };
+    });
+
+    if (appState.currentGranularity !== 'diario') {
+        let gruposClima = {};
+        dadosClimaEvolucao.forEach(d => {
+            let chave = (appState.currentGranularity === 'mensal') 
+                ? d.date.substring(0, 7) 
+                : `${new Date(d.date).getFullYear()}-W${Math.ceil(new Date(d.date).getDate()/7)}`;
+            
+            if (!gruposClima[chave]) gruposClima[chave] = { temps: [], chuvas: [] };
+            if (d.temp > 0) gruposClima[chave].temps.push(d.temp);
+            gruposClima[chave].chuvas.push(d.chuva);
+        });
+        dadosClimaEvolucao = Object.keys(gruposClima).map(k => ({
+            date: k,
+            temp: gruposClima[k].temps.length ? Utils.average(gruposClima[k].temps) : 0,
+            chuva: gruposClima[k].chuvas.reduce((sum, val) => sum + val, 0)
+        }));
+    }
+
+    const labelsClima = dadosClimaEvolucao.map(d => d.date);
+    const tempsClima = dadosClimaEvolucao.map(d => d.temp);
+    const chuvasClima = dadosClimaEvolucao.map(d => d.chuva);
+
+    Charts.updateLineChart('chClimaTemp', labelsClima, tempsClima, 'Temperatura (ºC)', '#f97316', 'rgba(249, 115, 22, 0.05)');
+    Charts.updateBarChart('chClimaChuva', labelsClima, chuvasClima, '#3b82f6');
     
     // Atualizar labels
     document.getElementById('statTemp').innerText = `${ptsTemp.length} dias com dados • Correlação: ${pearsonTemp.toFixed(2)}`;
@@ -326,157 +361,7 @@ function updateExecutiveStats(filtrados) {
     
     document.getElementById('exec-price-card').classList.remove('animate-pulse');
 }
-    let dadosEvolucao = [...filtrados];
-    if (appState.currentGranularity !== 'diario') {
-        let grupos = {};
-        filtrados.forEach(f => {
-            let chave = (appState.currentGranularity === 'mensal') 
-                ? f.date.substring(0, 7) 
-                : `${new Date(f.date).getFullYear()}-W${Math.ceil(new Date(f.date).getDate()/7)}`;
-            
-            if (!grupos[chave]) grupos[chave] = [];
-            grupos[chave].push(f.val);
-        });
-        dadosEvolucao = Object.keys(grupos).map(k => ({ date: k, val: Utils.average(grupos[k]) }));
-    }
 
-    Charts.updateLineChart('chEvolucao', dadosEvolucao.map(d => d.date), dadosEvolucao.map(d => d.val), 'Preço R$');
-
-    const mesesLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    const sazonalData = mesesLabels.map((_, i) => {
-        let m = appState.rawPrecos.filter(p => new Date(p.data).getUTCMonth() === i);
-        return m.length ? Utils.average(m.map(p => parseFloat(p.comum))) : 0;
-    });
-    Charts.updateBarChart('chSazonal', mesesLabels, sazonalData);
-
-    // ===== MAPEAMENTO CLIMÁTICO MELHORADO =====
-    console.group("🌦️ MAPEAMENTO CLIMÁTICO MULTIVARIADO");
-    
-    // Criar mapa de clima com todas as variáveis
-    const mapaClima = {};
-    let climaValido = 0;
-    
-    appState.rawClima.forEach(c => {
-        try {
-            let d = Utils.toYMD(c.data);
-            if (!d) return;
-            
-            // Parse de todas as variáveis climáticas
-            const temp = parseFloat(c.temperatura) || parseFloat(c.temperatura_media) || 0;
-            const chuva = parseFloat(c.chuva) || parseFloat(c.chuva_mm) || 0;
-            const umidade = parseFloat(c.humidade) || parseFloat(c.umidade) || 0;
-            const evapotransp = parseFloat(c.evapotranspiracao) || 0;
-            const vento = parseFloat(c.velocidadedevento) || 0;
-            const tempSolo = parseFloat(c.temperaturasolo) || 0;
-            
-            if (!mapaClima[d]) {
-                mapaClima[d] = { 
-                    temp, chuva, umidade, evapotransp, vento, tempSolo
-                };
-                climaValido++;
-            }
-        } catch (e) {}
-    });
-    
-    console.log(`Registros de clima mapeados: ${climaValido} de ${appState.rawClima.length}`);
-    console.log(`Datas únicas no mapa: ${Object.keys(mapaClima).length}`);
-
-    // Calcular correlações para cada variável climática
-    let correlacoes = [];
-    
-    // Temperatura
-    let ptsTemp = [];
-    filtrados.forEach(p => {
-        if (mapaClima[p.date] && mapaClima[p.date].temp !== 0) {
-            ptsTemp.push({ x: mapaClima[p.date].temp, y: p.val });
-        }
-    });
-    const pearsonTemp = Utils.getPearson(ptsTemp);
-    if (ptsTemp.length > 1) {
-        correlacoes.push({ nome: 'Temperatura', r: pearsonTemp, pontos: ptsTemp.length });
-    }
-
-    // Chuva
-    let ptsChuva = [];
-    filtrados.forEach(p => {
-        if (mapaClima[p.date] && mapaClima[p.date].chuva !== 0) {
-            ptsChuva.push({ x: mapaClima[p.date].chuva, y: p.val });
-        }
-    });
-    const pearsonChuva = Utils.getPearson(ptsChuva);
-    if (ptsChuva.length > 1) {
-        correlacoes.push({ nome: 'Precipitação', r: pearsonChuva, pontos: ptsChuva.length });
-    }
-
-    // Umidade
-    let ptsUmidade = [];
-    filtrados.forEach(p => {
-        if (mapaClima[p.date] && mapaClima[p.date].umidade !== 0) {
-            ptsUmidade.push({ x: mapaClima[p.date].umidade, y: p.val });
-        }
-    });
-    const pearsonUmidade = Utils.getPearson(ptsUmidade);
-    if (ptsUmidade.length > 1) {
-        correlacoes.push({ nome: 'Umidade', r: pearsonUmidade, pontos: ptsUmidade.length });
-    }
-
-    // Evapotranspiração
-    let ptsEvapotransp = [];
-    filtrados.forEach(p => {
-        if (mapaClima[p.date] && mapaClima[p.date].evapotransp !== 0) {
-            ptsEvapotransp.push({ x: mapaClima[p.date].evapotransp, y: p.val });
-        }
-    });
-    const pearsonEvapotransp = Utils.getPearson(ptsEvapotransp);
-    if (ptsEvapotransp.length > 1) {
-        correlacoes.push({ nome: 'Evapotranspiração', r: pearsonEvapotransp, pontos: ptsEvapotransp.length });
-    }
-
-    // Velocidade do Vento
-    let ptsVento = [];
-    filtrados.forEach(p => {
-        if (mapaClima[p.date] && mapaClima[p.date].vento !== 0) {
-            ptsVento.push({ x: mapaClima[p.date].vento, y: p.val });
-        }
-    });
-    const pearsonVento = Utils.getPearson(ptsVento);
-    if (ptsVento.length > 1) {
-        correlacoes.push({ nome: 'Velocidade do Vento', r: pearsonVento, pontos: ptsVento.length });
-    }
-
-    // Temperatura do Solo
-    let ptsTempSolo = [];
-    filtrados.forEach(p => {
-        if (mapaClima[p.date] && mapaClima[p.date].tempSolo !== 0) {
-            ptsTempSolo.push({ x: mapaClima[p.date].tempSolo, y: p.val });
-        }
-    });
-    const pearsonTempSolo = Utils.getPearson(ptsTempSolo);
-    if (ptsTempSolo.length > 1) {
-        correlacoes.push({ nome: 'Temperatura do Solo', r: pearsonTempSolo, pontos: ptsTempSolo.length });
-    }
-
-    console.log("Correlações calculadas:", correlacoes);
-    console.groupEnd();
-
-    // Atualizar gráficos scatter principais
-    Charts.updateScatter('chTemp', ptsTemp, 'Temp ºC');
-    Charts.updateScatter('chChuva', ptsChuva, 'Chuva mm');
-    
-    // Atualizar labels
-    document.getElementById('statTemp').innerText = `${ptsTemp.length} dias com dados • Correlação: ${pearsonTemp.toFixed(2)}`;
-    document.getElementById('statChuva').innerText = `${ptsChuva.length} dias com dados • Correlação: ${pearsonChuva.toFixed(2)}`;
-
-    // Renderizar tabela de correlações
-    renderCorrelationTable(correlacoes);
-
-    // Atualizar componentes
-    Components.atualizarSemaforo(filtrados);
-    if(document.getElementById('ia-insight')) {
-        Components.gerarInsightIA(filtrados, pearsonTemp, pearsonChuva, ptsTemp, ptsChuva, correlacoes);
-    }
-
-    populateHistoryTable();
 
 function renderCorrelationTable(correlacoes) {
     const tbody = document.getElementById('climateCorrelationTable');
