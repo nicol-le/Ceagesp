@@ -88,13 +88,57 @@ const Components = {
 
     renderMarketForecast(filtrados) {
         if (!filtrados.length) return;
-        const precoAtual = filtrados[filtrados.length - 1].val;
+        const ultimoRegistro = filtrados[filtrados.length - 1];
+        const precoAtual = ultimoRegistro.val;
         
-        const forecast = [
-            { dias: 30, val: precoAtual * 1.05 },
-            { dias: 60, val: precoAtual * 1.12 },
-            { dias: 90, val: precoAtual * 1.08 }
-        ];
+        // 1. Calcular a tendência recente (slope de regressão linear nos últimos 30 registros diários)
+        const n = Math.min(30, filtrados.length);
+        const ultimos = filtrados.slice(-n);
+        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+        for (let i = 0; i < n; i++) {
+            sumX += i;
+            sumY += ultimos[i].val;
+            sumXY += i * ultimos[i].val;
+            sumXX += i * i;
+        }
+        
+        // Evita divisão por zero
+        const denominator = (n * sumXX - sumX * sumX);
+        const slope = denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0;
+
+        // 2. Obter dados de sazonalidade histórica baseados nos preços gerais
+        const mesesLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+        const sazonalData = mesesLabels.map((_, i) => {
+            let m = appState.rawPrecos.filter(p => new Date(p.data).getUTCMonth() === i);
+            return m.length ? Utils.average(m.map(p => parseFloat(p.comum))) : 0;
+        });
+
+        const dataRef = new Date(ultimoRegistro.date + 'T00:00:00');
+        const mesAtual = dataRef.getUTCMonth();
+
+        const forecast = [30, 60, 90].map((dias, index) => {
+            // Projeção por tendência (linear regression slope * dias)
+            const projTrend = precoAtual + slope * dias;
+
+            // Projeção baseada na variação sazonal histórica entre o mês atual e o mês futuro
+            const mesFuturo = (mesAtual + Math.round(dias / 30)) % 12;
+            const avgAtualSazonal = sazonalData[mesAtual] || 1;
+            const avgFuturoSazonal = sazonalData[mesFuturo] || avgAtualSazonal;
+            const projSazonal = precoAtual * (avgFuturoSazonal / avgAtualSazonal);
+
+            // Combinação ponderada (blending):
+            // Mais relevância para a tendência recente no curto prazo (30 dias),
+            // mais relevância para a sazonalidade no longo prazo (90 dias).
+            const weightTrend = 0.6 - index * 0.2; // 30d -> 0.6, 60d -> 0.4, 90d -> 0.2
+            let val = projTrend * weightTrend + projSazonal * (1 - weightTrend);
+
+            // Proteção para evitar projeções absurdas (ex: valores negativos ou alta excessiva)
+            const minPermitido = precoAtual * 0.4;
+            const maxPermitido = precoAtual * 2.0;
+            val = Math.max(minPermitido, Math.min(maxPermitido, val));
+
+            return { dias, val };
+        });
 
         const statsContainer = document.getElementById('forecast-stats');
         statsContainer.innerHTML = forecast.map(f => `

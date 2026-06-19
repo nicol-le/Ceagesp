@@ -162,7 +162,7 @@ function renderDashboard() {
     Charts.updateBarChart('chSazonal', mesesLabels, sazonalData);
 
     // ===== MAPEAMENTO CLIMÁTICO MELHORADO =====
-    console.group("🌦️ MAPEAMENTO CLIMÁTICO MULTIVARIADO");
+    console.group(" MAPEAMENTO CLIMÁTICO MULTIVARIADO");
     
     // Criar mapa de clima com todas as variáveis
     const mapaClima = {};
@@ -372,13 +372,12 @@ function renderCorrelationTable(correlacoes) {
         return;
     }
 
-    // Ordenar por valor absoluto de correlação (maior primeiro)
     correlacoes.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
 
     correlacoes.forEach(corr => {
         const absR = Math.abs(corr.r);
         
-        let força = 'Nenhuma';
+        let força = 'Minima';
         let corClass = 'text-slate-500';
         
         if (absR > 0.7) {
